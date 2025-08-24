@@ -3,7 +3,7 @@ defmodule Scout.Store do
   Storage facade with runtime adapter configuration.
   
   Delegates to configured storage adapter while providing interface stability.
-  Uses behaviour-based contracts to prevent interface mismatches.
+  Uses UNIFIED behaviour contract to prevent interface mismatches.
   
   ## Available Adapters
   
@@ -12,13 +12,13 @@ defmodule Scout.Store do
   
   ## Configuration
   
-      # Runtime configuration (preferred)
+      # Runtime configuration (preferred - not compile-time locked)
       config :scout, :store_adapter, Scout.Store.ETS
   """
 
-  alias Scout.StoreBehaviour
+  alias Scout.Store.Adapter
 
-  # Runtime adapter configuration (not compile-time locked)
+  # Runtime adapter configuration (prevents compile-time lock-in)
   defp adapter do
     Application.get_env(:scout, :store_adapter, Scout.Store.ETS)
   end
@@ -29,12 +29,12 @@ defmodule Scout.Store do
   @spec child_spec(term()) :: Supervisor.child_spec()
   def child_spec(arg), do: adapter().child_spec(arg)
 
-  # Import types from behaviour
-  @type study_id :: StoreBehaviour.study_id()
-  @type trial_id :: StoreBehaviour.trial_id()
-  @type status :: StoreBehaviour.status()
+  # Import types from unified behaviour
+  @type study_id :: Adapter.study_id()
+  @type trial_id :: Adapter.trial_id()
+  @type status :: Adapter.status()
 
-  # Facade delegates with proper typing
+  # Facade delegates with fixed signatures
   @spec put_study(map()) :: :ok | {:error, term()}
   def put_study(study), do: adapter().put_study(study)
   
@@ -47,19 +47,22 @@ defmodule Scout.Store do
   @spec add_trial(study_id(), map()) :: {:ok, trial_id()} | {:error, term()}
   def add_trial(study_id, trial), do: adapter().add_trial(study_id, trial)
   
-  @spec update_trial(trial_id(), map()) :: :ok | {:error, term()}
-  def update_trial(id, updates), do: adapter().update_trial(id, updates)
+  # FIXED: update_trial now requires study_id for proper scoping
+  @spec update_trial(study_id(), trial_id(), map()) :: :ok | {:error, term()}
+  def update_trial(study_id, trial_id, updates), do: adapter().update_trial(study_id, trial_id, updates)
   
-  @spec record_observation(trial_id(), non_neg_integer(), non_neg_integer(), number()) :: :ok | {:error, term()}
-  def record_observation(trial_id, bracket, rung, score) do
-    adapter().record_observation(trial_id, bracket, rung, score)
+  # FIXED: record_observation requires study_id for proper scoping
+  @spec record_observation(study_id(), trial_id(), non_neg_integer(), non_neg_integer(), number()) :: :ok | {:error, term()}
+  def record_observation(study_id, trial_id, bracket, rung, score) do
+    adapter().record_observation(study_id, trial_id, bracket, rung, score)
   end
   
   @spec list_trials(study_id(), keyword()) :: [map()]
   def list_trials(study_id, filters \\ []), do: adapter().list_trials(study_id, filters)
   
-  @spec fetch_trial(trial_id()) :: {:ok, map()} | :error
-  def fetch_trial(id), do: adapter().fetch_trial(id)
+  # FIXED: fetch_trial now requires study_id to match DB uniqueness constraint
+  @spec fetch_trial(study_id(), trial_id()) :: {:ok, map()} | :error
+  def fetch_trial(study_id, trial_id), do: adapter().fetch_trial(study_id, trial_id)
   
   @spec observations_at_rung(study_id(), non_neg_integer(), non_neg_integer()) :: [{trial_id(), number()}]
   def observations_at_rung(study_id, bracket, rung) do

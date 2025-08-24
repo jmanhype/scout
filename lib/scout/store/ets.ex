@@ -54,30 +54,41 @@ defmodule Scout.Store.ETS do
     end
   end
   
+  @impl Scout.Store.Adapter
   def add_trial(study_id, trial) do
     GenServer.call(__MODULE__, {:add_trial, study_id, trial})
   end
   
-  def update_trial(id, updates) do
-    GenServer.call(__MODULE__, {:update_trial, id, updates})
-  end
-  
-  def record_observation(study_id, trial_id, bracket, rung, score) do
-    # Use cast for performance since observations are write-heavy
-    GenServer.cast(__MODULE__, {:record_observation, study_id, trial_id, bracket, rung, score})
-    :ok
+  @impl Scout.Store.Adapter 
+  def update_trial(study_id, trial_id, updates) do
+    GenServer.call(__MODULE__, {:update_trial, study_id, trial_id, updates})
   end
   
   @impl Scout.Store.Adapter
-  def list_trials(_study_id, _filters \\ []) do
-    # TODO: Actually filter by study_id once we store it properly
-    :ets.foldl(fn {id, t}, acc -> [Map.put(t, :id, id) | acc] end, [], @trials) 
+  def record_observation(study_id, trial_id, bracket, rung, score) do
+    # FIXED: Use call instead of cast to ensure writes are acknowledged
+    # Performance: Can batch observations if needed, but never lose data
+    GenServer.call(__MODULE__, {:record_observation, study_id, trial_id, bracket, rung, score})
+  end
+  
+  @impl Scout.Store.Adapter
+  def list_trials(study_id, _filters \\ []) do
+    # FIXED: Actually filter by study_id
+    :ets.foldl(fn {{sid, tid}, t}, acc -> 
+      if sid == study_id do
+        [Map.put(t, :id, tid) | acc]
+      else
+        acc
+      end
+    end, [], @trials) 
     |> Enum.reverse()
   end
   
-  def fetch_trial(id) do
-    case :ets.lookup(@trials, id) do
-      [{^id, t}] -> {:ok, Map.put(t, :id, id)}
+  @impl Scout.Store.Adapter
+  def fetch_trial(study_id, trial_id) do
+    # FIXED: Key by {study_id, trial_id} to match DB uniqueness
+    case :ets.lookup(@trials, {study_id, trial_id}) do
+      [{{^study_id, ^trial_id}, t}] -> {:ok, Map.put(t, :id, trial_id)}
       _ -> :error
     end
   end
@@ -88,7 +99,6 @@ defmodule Scout.Store.ETS do
     |> Enum.map(fn {_key, trial_id, score} -> {trial_id, score} end)
   end
 
-  # Implement missing Scout.Store.Adapter callbacks
   @impl Scout.Store.Adapter  
   def list_studies do
     :ets.foldl(fn {_id, study}, acc -> [study | acc] end, [], @studies)
@@ -101,47 +111,12 @@ defmodule Scout.Store.ETS do
   end
 
   @impl Scout.Store.Adapter
-  def get_trial(_study_id, trial_id) do
-    case fetch_trial(trial_id) do
-      {:ok, trial} -> {:ok, trial}
-      _ -> {:error, :not_found}
-    end
-  end
-
-  @impl Scout.Store.Adapter
-  def put_trial(study_id, trial) do
-    add_trial(study_id, trial)
-  end
-
-  @impl Scout.Store.Adapter
-  def update_trial(_study_id, trial_id, updates) do
-    case update_trial(trial_id, updates) do
-      :ok -> {:ok, nil}
-      error -> error
-    end
-  end
-
-  @impl Scout.Store.Adapter
   def delete_trial(study_id, trial_id) do
     GenServer.call(__MODULE__, {:delete_trial, study_id, trial_id})
   end
 
   @impl Scout.Store.Adapter
-  def put_observation(study_id, trial_id, observation) do
-    score = Map.get(observation, :score) || Map.get(observation, :value)
-    bracket = Map.get(observation, :bracket, 0)
-    rung = Map.get(observation, :rung, 0)
-    record_observation(study_id, trial_id, bracket, rung, score)
-    {:ok, observation}
-  end
-
-  @impl Scout.Store.Adapter
-  def list_observations(study_id, trial_id) do
-    pattern = {{study_id, :_, :_}, trial_id, :"$1"}
-    :ets.match(@obs, pattern)
-    |> List.flatten()
-    |> Enum.map(fn score -> %{value: score} end)
-  end
+  def health_check(), do: :ok
   
   # Additional public functions for events
   def mark_pruned(study_id, trial_id) do
@@ -178,18 +153,20 @@ defmodule Scout.Store.ETS do
   end
   
   @impl GenServer
-  def handle_call({:add_trial, _study_id, trial}, _from, state) do
-    id = Map.get(trial, :id) || Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    trial_with_id = Map.put(trial, :id, id)
-    :ets.insert(@trials, {id, trial_with_id})
-    {:reply, {:ok, id}, state}
+  def handle_call({:add_trial, study_id, trial}, _from, state) do
+    trial_id = Map.get(trial, :id) || Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+    trial_with_id = Map.put(trial, :id, trial_id)
+    # FIXED: Key trials by {study_id, trial_id} to prevent cross-study contamination
+    :ets.insert(@trials, {{study_id, trial_id}, trial_with_id})
+    {:reply, {:ok, trial_id}, state}
   end
   
   @impl GenServer
-  def handle_call({:update_trial, id, updates}, _from, state) do
-    result = case :ets.lookup(@trials, id) do
-      [{^id, t}] -> 
-        :ets.insert(@trials, {id, Map.merge(t, updates)})
+  def handle_call({:update_trial, study_id, trial_id, updates}, _from, state) do
+    key = {study_id, trial_id}
+    result = case :ets.lookup(@trials, key) do
+      [{^key, t}] -> 
+        :ets.insert(@trials, {key, Map.merge(t, updates)})
         :ok
       _ -> 
         {:error, :not_found}
@@ -198,9 +175,9 @@ defmodule Scout.Store.ETS do
   end
   
   @impl GenServer
-  def handle_cast({:record_observation, study_id, trial_id, bracket, rung, score}, state) do
+  def handle_call({:record_observation, study_id, trial_id, bracket, rung, score}, _from, state) do
     :ets.insert(@obs, {{study_id, bracket, rung}, trial_id, score})
-    {:noreply, state}
+    {:reply, :ok, state}
   end
   
   @impl GenServer
@@ -210,19 +187,27 @@ defmodule Scout.Store.ETS do
   end
 
   @impl GenServer
-  def handle_call({:delete_study, id}, _from, state) do
-    :ets.delete(@studies, id)
-    # Delete related trials
-    trials_to_delete = :ets.foldl(fn {trial_id, _trial}, acc -> 
-      [trial_id | acc]
+  def handle_call({:delete_study, study_id}, _from, state) do
+    :ets.delete(@studies, study_id)
+    # FIXED: Only delete trials for THIS study (was deleting ALL trials!)
+    trials_to_delete = :ets.foldl(fn {{sid, tid}, _trial}, acc -> 
+      if sid == study_id do
+        [{sid, tid} | acc]  # Collect keys for this study only
+      else
+        acc
+      end
     end, [], @trials)
     Enum.each(trials_to_delete, &:ets.delete(@trials, &1))
+    # Also delete related observations and events for this study
+    :ets.match_delete(@obs, {{study_id, :_, :_}, :_, :_})
+    :ets.match_delete(@events, {{study_id, :_}, :_})
     {:reply, :ok, state}
   end
 
   @impl GenServer
-  def handle_call({:delete_trial, _study_id, trial_id}, _from, state) do
-    :ets.delete(@trials, trial_id)
+  def handle_call({:delete_trial, study_id, trial_id}, _from, state) do
+    # FIXED: Use composite key
+    :ets.delete(@trials, {study_id, trial_id})
     {:reply, :ok, state}
   end
 end

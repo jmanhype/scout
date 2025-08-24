@@ -18,7 +18,15 @@ defmodule Scout.Store.Postgres do
   def put_study(study_map) do
     changeset = Study.changeset(%Study{}, study_map)
     
-    case Repo.insert(changeset, on_conflict: :replace_all, conflict_target: :id) do
+    # FIXED: Use explicit column updates instead of :replace_all to prevent data loss
+    case Repo.insert(changeset, 
+                     on_conflict: [set: [goal: changeset.changes[:goal], 
+                                        search_space: changeset.changes[:search_space],
+                                        metadata: changeset.changes[:metadata],
+                                        max_trials: changeset.changes[:max_trials],
+                                        updated_at: {:placeholder, :now}]],
+                     conflict_target: :id,
+                     placeholders: %{now: DateTime.utc_now()}) do
       {:ok, _study} -> :ok
       {:error, changeset} -> {:error, changeset}
     end
@@ -52,14 +60,65 @@ defmodule Scout.Store.Postgres do
     end
   end
   
+  @impl true
+  def set_study_status(study_id, status) do
+    query = from s in Study, where: s.id == ^study_id
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      study ->
+        changeset = Study.changeset(study, %{status: Atom.to_string(status)})
+        case Repo.update(changeset) do
+          {:ok, _} -> :ok
+          error -> error
+        end
+    end
+  end
+
   # Trial operations
   
+  @impl true
+  def add_trial(study_id, trial_map) do
+    trial_map = Map.put(trial_map, :study_id, study_id)
+    changeset = Trial.changeset(%Trial{}, trial_map)
+    
+    case Repo.insert(changeset) do
+      {:ok, trial} -> {:ok, trial.id}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+  
+  @impl true
+  def fetch_trial(study_id, trial_id) do
+    get_trial(study_id, trial_id)
+  end
+  
+  @impl true 
+  def list_trials(study_id, _filters \\ []) do
+    query = from t in Trial,
+      where: t.study_id == ^study_id,
+      order_by: [asc: t.number]
+    
+    query
+    |> Repo.all()
+    |> Enum.map(&trial_to_map/1)
+  end
+
   @impl true
   def put_trial(study_id, trial_map) do
     trial_map = Map.put(trial_map, :study_id, study_id)
     changeset = Trial.changeset(%Trial{}, trial_map)
     
-    case Repo.insert(changeset, on_conflict: :replace_all, conflict_target: [:study_id, :id]) do
+    # FIXED: Use explicit column updates instead of :replace_all to prevent data loss
+    case Repo.insert(changeset,
+                     on_conflict: [set: [params: changeset.changes[:params],
+                                        value: changeset.changes[:value], 
+                                        status: changeset.changes[:status],
+                                        metadata: changeset.changes[:metadata],
+                                        started_at: changeset.changes[:started_at],
+                                        completed_at: changeset.changes[:completed_at],
+                                        updated_at: {:placeholder, :now}]],
+                     conflict_target: [:study_id, :id],
+                     placeholders: %{now: DateTime.utc_now()}) do
       {:ok, _trial} -> :ok
       {:error, changeset} -> {:error, changeset}
     end
@@ -76,16 +135,6 @@ defmodule Scout.Store.Postgres do
     end
   end
   
-  @impl true
-  def list_trials(study_id) do
-    query = from t in Trial,
-      where: t.study_id == ^study_id,
-      order_by: [asc: t.number]
-    
-    query
-    |> Repo.all()
-    |> Enum.map(&trial_to_map/1)
-  end
   
   @impl true
   def update_trial(study_id, trial_id, updates) do
@@ -121,6 +170,47 @@ defmodule Scout.Store.Postgres do
   # Observation operations
   
   @impl true
+  def record_observation(study_id, trial_id, bracket, rung, score) do
+    observation_map = %{
+      study_id: study_id,
+      trial_id: trial_id,
+      step: rung,  # Map rung to step
+      value: score,
+      metadata: %{bracket: bracket, rung: rung}
+    }
+    
+    changeset = Observation.changeset(%Observation{}, observation_map)
+    
+    case Repo.insert(changeset) do
+      {:ok, _observation} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+  
+  @impl true
+  def observations_at_rung(study_id, bracket, rung) do
+    query = from o in Observation,
+      where: o.study_id == ^study_id and 
+             fragment("?->>'bracket'", o.metadata) == ^to_string(bracket) and
+             fragment("?->>'rung'", o.metadata) == ^to_string(rung),
+      order_by: [asc: o.step]
+    
+    query
+    |> Repo.all()
+    |> Enum.map(&{&1.trial_id, &1.value})
+  end
+  
+  @impl true
+  def health_check do
+    try do
+      Ecto.Adapters.SQL.query!(Repo, "SELECT 1", [])
+      :ok
+    rescue
+      _ -> {:error, :database_unavailable}
+    end
+  end
+  
+  # Legacy observation methods (for backward compatibility)
   def put_observation(study_id, trial_id, observation_map) do
     observation_map = observation_map
       |> Map.put(:study_id, study_id)
@@ -134,7 +224,6 @@ defmodule Scout.Store.Postgres do
     end
   end
   
-  @impl true
   def list_observations(study_id, trial_id) do
     query = from o in Observation,
       where: o.study_id == ^study_id and o.trial_id == ^trial_id,

@@ -67,7 +67,7 @@ defmodule Scout.Executor.Oban.TrialWorker do
     {:ok, _} = Store.add_trial(study_id, t)
     Telemetry.trial_event(:start, %{ix: ix}, %{study: study_id, trial_id: id, params: params})
 
-    goal = String.to_atom(args["goal"] || "maximize")
+    goal = safe_goal_atom(args["goal"] || "maximize")
 
     result =
       case :erlang.fun_info(objective_fun)[:arity] do
@@ -77,10 +77,19 @@ defmodule Scout.Executor.Oban.TrialWorker do
 
     case result do
       {:ok, score, metrics} ->
-        Store.update_trial(id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()})
-        Telemetry.trial_event(:stop, %{score: score}, %{study: study_id, trial_id: id})
+        # FIXED: Handle store write errors - don't ignore return values
+        case Store.update_trial(study_id, id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()}) do
+          :ok -> 
+            Telemetry.trial_event(:stop, %{score: score}, %{study: study_id, trial_id: id})
+          {:error, reason} ->
+            Telemetry.trial_event(:error, %{}, %{study: study_id, trial_id: id, reason: "store_update_failed: #{inspect(reason)}"})
+        end
       {:error, reason} ->
-        Store.update_trial(id, %{status: :failed, error: inspect(reason), finished_at: now()})
+        case Store.update_trial(study_id, id, %{status: :failed, error: inspect(reason), finished_at: now()}) do
+          :ok -> :ok
+          {:error, store_error} ->
+            Telemetry.trial_event(:error, %{}, %{study: study_id, trial_id: id, reason: "store_update_failed: #{inspect(store_error)}"})
+        end
         Telemetry.trial_event(:error, %{}, %{study: study_id, trial_id: id, reason: inspect(reason)})
     end
 
@@ -119,16 +128,17 @@ defmodule Scout.Executor.Oban.TrialWorker do
   defp resolve_study_callbacks(""), do: :error
   defp resolve_study_callbacks(nil), do: :error
   defp resolve_study_callbacks(mod_str) do
-    mod = try do
-      String.to_existing_atom(mod_str)
-    rescue
-      _ -> String.to_atom(mod_str)
-    end
-    
-    if function_exported?(mod, :search_space, 1) and (function_exported?(mod, :objective, 1) or function_exported?(mod, :objective, 2)) do
-      {:ok, {&mod.search_space/1, &mod.objective/1}}
-    else
-      :error
+    # SECURITY FIX: Only allow whitelisted study modules - never create new atoms
+    case safe_module_atom(mod_str) do
+      {:ok, mod} ->
+        if function_exported?(mod, :search_space, 1) and 
+           (function_exported?(mod, :objective, 1) or function_exported?(mod, :objective, 2)) do
+          {:ok, {&mod.search_space/1, &mod.objective/1}}
+        else
+          :error
+        end
+      :error ->
+        :error
     end
   end
 
@@ -144,12 +154,56 @@ defmodule Scout.Executor.Oban.TrialWorker do
       "" -> default
       nil -> default
       _ -> 
-        try do
-          String.to_existing_atom(str)
-        rescue
-          _ -> String.to_atom(str)
+        # SECURITY FIX: Only resolve to existing atoms - never create new ones
+        case safe_sampler_atom(str) do
+          {:ok, atom} -> atom
+          :error -> default
         end
     end
+  end
+  
+  # Security: Whitelist valid goal atoms to prevent atom table exhaustion
+  defp safe_goal_atom("maximize"), do: :maximize
+  defp safe_goal_atom("minimize"), do: :minimize
+  defp safe_goal_atom("MAXIMIZE"), do: :maximize
+  defp safe_goal_atom("MINIMIZE"), do: :minimize
+  defp safe_goal_atom(unknown) do
+    raise ArgumentError, "Invalid goal '#{unknown}'. Use 'maximize' or 'minimize'"
+  end
+
+  # Security: Whitelist valid sampler modules
+  defp safe_sampler_atom(str) do
+    case str do
+      "Scout.Sampler.RandomSearch" -> {:ok, Scout.Sampler.RandomSearch}
+      "Scout.Sampler.TPE" -> {:ok, Scout.Sampler.TPE}  
+      "Scout.Sampler.GridSearch" -> {:ok, Scout.Sampler.GridSearch}
+      "Scout.Sampler.BayesOpt" -> {:ok, Scout.Sampler.BayesOpt}
+      "Elixir.Scout.Sampler.RandomSearch" -> {:ok, Scout.Sampler.RandomSearch}
+      "Elixir.Scout.Sampler.TPE" -> {:ok, Scout.Sampler.TPE}
+      "Elixir.Scout.Sampler.GridSearch" -> {:ok, Scout.Sampler.GridSearch}
+      "Elixir.Scout.Sampler.BayesOpt" -> {:ok, Scout.Sampler.BayesOpt}
+      _ -> :error
+    end
+  end
+  
+  # Security: Whitelist valid study modules (expand as needed)
+  defp safe_module_atom(str) do
+    # Only allow modules that are already loaded and follow naming pattern
+    try do
+      atom = String.to_existing_atom(str)
+      # Additional validation - must be in allowed namespace  
+      if module_safe?(atom), do: {:ok, atom}, else: :error
+    rescue
+      ArgumentError -> :error
+    end
+  end
+  
+  # Validate module is in safe namespace
+  defp module_safe?(module) do
+    str = Atom.to_string(module)
+    # Allow user-defined study modules and test modules
+    String.starts_with?(str, "Elixir.") and 
+    (String.contains?(str, "Study") or String.contains?(str, "Example") or String.contains?(str, "Test"))
   end
 
   defp now, do: System.system_time(:millisecond)

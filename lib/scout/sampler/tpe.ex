@@ -22,11 +22,23 @@ defmodule Scout.Sampler.TPE do
       goal: Map.get(opts, :goal, :maximize),
       seed: Map.get(opts, :seed),
       multivariate: Map.get(opts, :multivariate, true),  # Enable by default
-      bandwidth_factor: Map.get(opts, :bandwidth_factor, 1.06)  # Scott's rule
+      bandwidth_factor: Map.get(opts, :bandwidth_factor, 1.06),  # Scott's rule
+      rng_state: nil  # Will be seeded per trial
     }
   end
 
   def next(space_fun, ix, history, state) do
+    # Initialize RNG state if not set
+    rng_state = if state.rng_state do
+      state.rng_state
+    else
+      if state.seed do
+        :rand.seed_s(:exsplus, {state.seed, ix, 1337})
+      else
+        :rand.export_seed()
+      end
+    end
+    
     if length(history) < state.min_obs do
       Random.next(space_fun, ix, history, state)
     else
@@ -65,22 +77,28 @@ defmodule Scout.Sampler.TPE do
               case spec[k] do
                 {:uniform, a, b} ->
                   %{good: g} = Map.get(dists, k, %{good: %{xs: [], sigmas: []}, range: {a, b}})
-                  {mu, si} = pick_component(g)
-                  x = clamp(:rand.normal(mu, si), a, b)
+                  {mu, si} = pick_component(g, rng_state)
+                  {x, new_rng_state} = :rand.normal_s(mu, si, rng_state)
+                  rng_state = new_rng_state
+                  x = clamp(x, a, b)
                   Map.put(acc, k, x)
                 {:log_uniform, a, b} ->
                   # Sample in log space
                   log_a = :math.log(a)
                   log_b = :math.log(b)
                   %{good: g} = Map.get(dists, k, %{good: %{xs: [], sigmas: []}, range: {log_a, log_b}})
-                  {mu, si} = pick_component(g)
-                  log_x = clamp(:rand.normal(mu, si), log_a, log_b)
+                  {mu, si} = pick_component(g, rng_state)
+                  {log_x, new_rng_state} = :rand.normal_s(mu, si, rng_state)
+                  rng_state = new_rng_state
+                  log_x = clamp(log_x, log_a, log_b)
                   Map.put(acc, k, :math.exp(log_x))
                 {:int, a, b} ->
                   # Sample as continuous then round
                   %{good: g} = Map.get(dists, k, %{good: %{xs: [], sigmas: []}, range: {a, b}})
-                  {mu, si} = pick_component(g)
-                  x = clamp(:rand.normal(mu, si), a, b)
+                  {mu, si} = pick_component(g, rng_state)
+                  {x, new_rng_state} = :rand.normal_s(mu, si, rng_state)
+                  rng_state = new_rng_state
+                  x = clamp(x, a, b)
                   Map.put(acc, k, round(x))
                 _ ->
                   acc
@@ -101,7 +119,7 @@ defmodule Scout.Sampler.TPE do
           {best_cand, _} = Enum.max_by(scored, fn {_, s} -> s end)
           best_cand
         end
-        {best, state}
+        {best, Map.put(state, :rng_state, rng_state)}
       end
     end
   end
@@ -157,8 +175,13 @@ defmodule Scout.Sampler.TPE do
     end
   end
 
-  defp pick_component(%{xs: xs, sigmas: sigmas}) do
-    if xs == [], do: {0.0, 1.0}, else: (i = :rand.uniform(length(xs)) - 1; {Enum.at(xs, i), Enum.at(sigmas, i)})
+  defp pick_component(%{xs: xs, sigmas: sigmas}, rng_state) do
+    if xs == [] do
+      {0.0, 1.0}
+    else
+      {i, _} = :rand.uniform_s(length(xs), rng_state)
+      {Enum.at(xs, i - 1), Enum.at(sigmas, i - 1)}
+    end
   end
   
   # TPE-based categorical parameter sampling
