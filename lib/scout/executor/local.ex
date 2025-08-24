@@ -1,8 +1,12 @@
 
 defmodule Scout.Executor.Local do
   @moduledoc "Local in-process executor using Task.async_stream (one-shot objective)."
+  
+  @behaviour Scout.Executor
+  
   alias Scout.{Store, Trial, Telemetry, Util.Seed}
 
+  @impl Scout.Executor
   def run(study) do
     base_seed = study.seed || :erlang.unique_integer([:positive])
     :ok = Store.put_study(Map.merge(Map.take(study, [:id, :goal, :max_trials, :parallelism]), %{seed: base_seed}))

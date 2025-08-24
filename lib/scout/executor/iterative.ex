@@ -3,11 +3,15 @@ defmodule Scout.Executor.Iterative do
   Iterative executor with pruning support (Hyperband/SHA).
   Objective arity 2: `fn params, report_fun -> ... end`
   """
+  
+  @behaviour Scout.Executor
+  
   alias Scout.{Store, Trial, Telemetry}
   
   # Use ETS store by default
   @store_impl Application.compile_env(:scout, :store, Scout.Store)
 
+  @impl Scout.Executor
   def run(study) do
     base_seed = study.seed || :erlang.unique_integer([:positive])
     :rand.seed(:exsss, {base_seed, 1, 1})

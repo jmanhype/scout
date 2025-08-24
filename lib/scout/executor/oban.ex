@@ -7,8 +7,12 @@ defmodule Scout.Executor.Oban do
     * For full durability across restarts, define a **Study module**. The Oban worker
       loads objective/search_space from that module (callbacks), not from closures.
   """
+  
+  @behaviour Scout.Executor
+  
   alias Scout.{Store, Telemetry}
 
+  @impl Scout.Executor
   def run(%{id: id} = study) do
     :ok = Store.put_study(study)
     Telemetry.study_event(:start, %{}, %{study: id, executor: :oban})

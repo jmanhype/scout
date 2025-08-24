@@ -11,7 +11,11 @@ config :scout, Scout.Repo,
   pool_size: 10
 
 config :scout, 
-  ecto_repos: [Scout.Repo]
+  ecto_repos: [Scout.Repo],
+  # Set to false to disable the dashboard (useful for library-only usage)
+  dashboard_enabled: true,
+  # Storage adapter: Scout.Store.ETS or Scout.Store.Ecto
+  store_adapter: Scout.Store.ETS
 
 config :scout, ScoutDashboardWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
