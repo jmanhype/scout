@@ -9,7 +9,10 @@ defmodule ScoutDashboard.ScoutClient do
 
   def status(study_id) do
     if Code.ensure_loaded?(@status_mod) and function_exported?(@status_mod, :status, 1) do
-      apply(@status_mod, :status, [study_id])
+      case apply(@status_mod, :status, [study_id]) do
+        {:ok, status} -> status
+        {:error, _} -> synthetic_status(study_id)
+      end
     else
       synthetic_status(study_id)
     end

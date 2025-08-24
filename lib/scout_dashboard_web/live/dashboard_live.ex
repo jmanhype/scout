@@ -8,12 +8,24 @@ defmodule ScoutDashboardWeb.DashboardLive do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    if connected?(socket), do: :timer.send_interval(@tick, :tick)
+    IO.puts("LiveView mounted for study: #{id}")
+    if connected?(socket) do
+      IO.puts("Socket connected, starting timer")
+      :timer.send_interval(@tick, :tick)
+    else
+      IO.puts("Socket not connected yet")
+    end
+    
+    # Get initial data
+    status = ScoutClient.status(id)
+    best = ScoutClient.best(id)
+    IO.inspect(best, label: "Initial best result in mount")
+    
     {:ok,
       socket
       |> assign(:study_id, id)
-      |> assign(:status, %{brackets: %{}, totals: %{}})
-      |> assign(:best, nil)
+      |> assign(:status, status)
+      |> assign(:best, best)
       |> assign(:history, [])
     }
   end
@@ -23,6 +35,7 @@ defmodule ScoutDashboardWeb.DashboardLive do
     study_id = socket.assigns.study_id
     status = ScoutClient.status(study_id)
     best = ScoutClient.best(study_id)
+    IO.inspect(best, label: "ScoutClient.best returned")
     history = Enum.take([best | socket.assigns.history], 120)
     {:noreply, assign(socket, status: status, best: best, history: history)}
   end

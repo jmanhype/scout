@@ -7,7 +7,8 @@ defmodule ScoutDashboard.Application do
     children = [
       {Phoenix.PubSub, name: ScoutDashboard.PubSub},
       ScoutDashboardWeb.Endpoint,
-      ScoutDashboard.TelemetryListener
+      ScoutDashboard.TelemetryListener,
+      Scout.Store
     ]
 
     opts = [strategy: :one_for_one, name: ScoutDashboard.Supervisor]

@@ -58,8 +58,9 @@ defmodule Scout.Easy do
     n_trials = Keyword.get(opts, :n_trials, 100)
     direction = Keyword.get(opts, :direction, :minimize)
     sampler = Keyword.get(opts, :sampler, :random)
+    pruner = Keyword.get(opts, :pruner)
     seed = Keyword.get(opts, :seed, :rand.uniform(1000000))
-    study_name = Keyword.get(opts, :study_name, "study_#{System.system_time(:second)}")
+    study_name = Keyword.get(opts, :study_id) || Keyword.get(opts, :study_name, "study_#{System.system_time(:second)}")
     parallelism = Keyword.get(opts, :parallelism, 1)
     timeout = Keyword.get(opts, :timeout, :infinity)
     
@@ -85,7 +86,7 @@ defmodule Scout.Easy do
       objective: wrap_objective(objective),
       sampler: resolve_sampler(sampler),
       sampler_opts: %{seed: seed},
-      pruner: nil,
+      pruner: resolve_pruner(pruner),
       pruner_opts: %{},
       seed: seed,
       metadata: %{created_by: "Scout.Easy", api_version: "1.0"}
@@ -170,7 +171,7 @@ defmodule Scout.Easy do
       {:ok, _} -> :ok
       {:error, {:already_started, _}} -> :ok
       _ ->
-        # Start minimal Scout components if not already started
+        # Start Scout components with ETS store
         case Process.whereis(Scout.Store) do
           nil -> 
             {:ok, _} = Scout.Store.start_link([])
@@ -207,4 +208,10 @@ defmodule Scout.Easy do
   defp resolve_sampler(:cmaes), do: Scout.Sampler.CmaEs
   defp resolve_sampler(module) when is_atom(module), do: module
   defp resolve_sampler(_), do: Scout.Sampler.RandomSearch
+
+  defp resolve_pruner(:median), do: Scout.Pruner.MedianPruner
+  defp resolve_pruner(:percentile), do: Scout.Pruner.PercentilePruner  
+  defp resolve_pruner(:hyperband), do: Scout.Pruner.HyperbandPruner
+  defp resolve_pruner(module) when is_atom(module), do: module
+  defp resolve_pruner(_), do: nil
 end

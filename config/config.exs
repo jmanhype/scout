@@ -1,6 +1,18 @@
 
 import Config
 
+# Configure Ecto and database for Scout persistence
+config :scout, Scout.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  database: "scout_dev",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  pool_size: 10
+
+config :scout, 
+  ecto_repos: [Scout.Repo]
+
 config :scout, ScoutDashboardWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   url: [host: "localhost"],
