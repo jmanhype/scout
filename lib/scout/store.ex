@@ -3,7 +3,22 @@ defmodule Scout.Store do
   Facade and behaviour definition for Scout storage backends.
   
   This module defines the storage contract and delegates to the configured
-  storage adapter (ETS or Ecto).
+  storage adapter.
+  
+  ## Available Adapters
+  
+  - `Scout.Store.ETS` (default) - In-memory storage, fast but non-persistent
+  - `Scout.Store.Postgres` - PostgreSQL storage, persistent and distributed-ready
+  
+  ## Configuration
+  
+      # In config/config.exs or runtime.exs
+      
+      # For in-memory storage (default)
+      config :scout, :store_adapter, Scout.Store.ETS
+      
+      # For PostgreSQL storage
+      config :scout, :store_adapter, Scout.Store.Postgres
   """
 
   @callback put_study(map()) :: :ok | {:error, term()}

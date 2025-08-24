@@ -137,12 +137,41 @@ http://localhost:4050/adaptive/study-id
 2. Use Scout.Export for data extraction
 3. Store adapter can be configured via compile-time config
 
-## 📝 Remaining Todo Items
+## 🆕 Latest Addition: PostgreSQL Persistence
 
-### PostgreSQL Persistence
-- Add Ecto-based storage adapter option
-- Enable persistent storage across restarts
-- Support for distributed optimization
+### Scout.Store.Postgres Module
+- **Complete PostgreSQL storage adapter** implementing Scout.Store.Adapter behaviour
+- **Ecto schemas** for Studies, Trials, and Observations with proper relationships
+- **Database migrations** updated for the new schema structure
+- **Automatic Repo startup** when PostgreSQL adapter is configured
+- **Configuration template** in `config/postgres.exs` with examples
+
+### Benefits of PostgreSQL Storage
+- ✅ **Persistent storage** - Data survives application restarts
+- ✅ **Distributed optimization** - Multiple nodes can share the same database
+- ✅ **SQL querying** - Use SQL for complex analysis and reporting
+- ✅ **Crash recovery** - Database handles consistency and durability
+- ✅ **Data pipeline integration** - Easy ETL to data warehouses
+
+### Usage
+```elixir
+# In config/config.exs
+config :scout, :store_adapter, Scout.Store.Postgres
+
+config :scout, Scout.Repo,
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  database: "scout_dev"
+
+# Setup database
+mix ecto.create
+mix ecto.migrate
+
+# Now Scout automatically uses PostgreSQL!
+```
+
+## 📝 Remaining Todo Items
 
 ### Enhanced Visualizations
 - Parallel coordinates plot for hyperparameters

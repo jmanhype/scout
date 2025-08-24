@@ -4,6 +4,14 @@ defmodule Scout.Application do
 
   @impl true
   def start(_type, _args) do
+    # Database components (only if PostgreSQL adapter is configured)
+    repo_children = 
+      if Application.get_env(:scout, :store_adapter) == Scout.Store.Postgres do
+        [Scout.Repo]
+      else
+        []
+      end
+    
     # Core Scout components that are always needed
     base_children = [
       {Scout.Store, []},
@@ -25,7 +33,7 @@ defmodule Scout.Application do
         []
       end
 
-    children = base_children ++ dashboard_children
+    children = repo_children ++ base_children ++ dashboard_children
     
     Supervisor.start_link(children, strategy: :one_for_one, name: Scout.Supervisor)
   end

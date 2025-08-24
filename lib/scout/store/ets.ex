@@ -6,7 +6,7 @@ defmodule Scout.Store.ETS do
   read concurrency. All mutations go through the GenServer API.
   """
   
-  @behaviour Scout.Store
+  @behaviour Scout.Store.Adapter
   
   use GenServer
   
