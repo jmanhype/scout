@@ -17,6 +17,7 @@ defmodule ScoutDashboardWeb.Router do
     live "/", HomeLive, :index
     live "/studies/:id", DashboardLive, :show
     live "/adaptive/:id", AdaptiveDashboardLive, :show
+    live "/visualizations/:study_id", VisualizationsLive, :show
     get "/optimize/:study_id", OptimizeController, :run
     get "/populate/:study_id", PopulateController, :run
     get "/debug/:study_id", DebugController, :test

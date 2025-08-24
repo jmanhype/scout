@@ -44,6 +44,14 @@ defmodule ScoutDashboardWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <h2>Study: <%= @study_id %></h2>
+    <div class="mt-4 mb-6 flex space-x-4">
+      <.link navigate={~p"/visualizations/#{@study_id}"} class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+        📊 Advanced Visualizations
+      </.link>
+      <.link navigate={~p"/adaptive/#{@study_id}"} class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+        ⚡ Adaptive Dashboard
+      </.link>
+    </div>
     <.best_panel best={@best} />
     <.brackets status={@status} />
     <.sparkline history={@history} />
