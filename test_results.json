@@ -1,0 +1,121 @@
+{
+  "metadata": {},
+  "study_id": "export-test-study",
+  "trials": [
+    {
+      "id": "81215b18e123a815",
+      "status": "succeeded",
+      "value": 149.2224562344959,
+      "started_at": 1756038077358,
+      "params": {
+        "x": -0.7317452605252694,
+        "y": 1.744680279882699
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "b901d7a6761bc9fd",
+      "status": "succeeded",
+      "value": 4.6490096375323215,
+      "started_at": 1756038077358,
+      "params": {
+        "x": 1.2140461532457136,
+        "y": 1.2593575114816842
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "9d4641a918990216",
+      "status": "succeeded",
+      "value": 238.23573486793327,
+      "started_at": 1756038077358,
+      "params": {
+        "x": -1.1060915019224944,
+        "y": -0.30561395425141047
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "d32399bb103f90fb",
+      "status": "succeeded",
+      "value": 335.855379989201,
+      "started_at": 1756038077358,
+      "params": {
+        "x": 1.6208999086013627,
+        "y": 0.7957328729910396
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "8c35766580582f9f",
+      "status": "succeeded",
+      "value": 65.83967000843523,
+      "started_at": 1756038077358,
+      "params": {
+        "x": 1.09310327180384,
+        "y": 0.3835117011276754
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "d16c9dcaf9223435",
+      "status": "succeeded",
+      "value": 372.66602469070193,
+      "started_at": 1756038077358,
+      "params": {
+        "x": 0.40887160050217286,
+        "y": -1.7623747182388376
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "8cce223c7b0c998a",
+      "status": "succeeded",
+      "value": 239.12473361897153,
+      "started_at": 1756038077358,
+      "params": {
+        "x": -1.6521882173299036,
+        "y": 1.2062738016129937
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "187faedfbeceb61f",
+      "status": "succeeded",
+      "value": 41.92916525173557,
+      "started_at": 1756038077358,
+      "params": {
+        "x": -0.18519582262704581,
+        "y": -0.6022908838150487
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "bf876382d44a88a8",
+      "status": "succeeded",
+      "value": 319.9655100486219,
+      "started_at": 1756038077358,
+      "params": {
+        "x": 0.21010901609538424,
+        "y": 1.831158899553929
+      },
+      "completed_at": 1756038077358
+    },
+    {
+      "id": "b848b0f8a0cb2b08",
+      "status": "succeeded",
+      "value": 697.4325410980829,
+      "started_at": 1756038077358,
+      "params": {
+        "x": 0.8766266777907381,
+        "y": -1.8723916623438925
+      },
+      "completed_at": 1756038077358
+    }
+  ],
+  "goal": "minimize",
+  "n_trials": 10,
+  "created_at": null,
+  "sampler": null,
+  "pruner": null
+}
