@@ -177,7 +177,9 @@ defmodule Scout.Easy do
         # Start Scout components with ETS store
         case Process.whereis(Scout.Store) do
           nil -> 
-            {:ok, _} = Scout.Store.start_link([])
+            # Start the store using the configured adapter
+            adapter = Application.get_env(:scout, :store_adapter, Scout.Store.ETS)
+            {:ok, _} = adapter.start_link([])
             :ok
           _ -> 
             :ok

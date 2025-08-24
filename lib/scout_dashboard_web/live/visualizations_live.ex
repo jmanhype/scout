@@ -233,7 +233,7 @@ defmodule ScoutDashboardWeb.VisualizationsLive do
           Visualizations: <%= @study_id %>
         </h1>
         <div class="mt-2 flex items-center space-x-4">
-          <.link navigate={~p"/studies/#{@study_id}"} class="text-blue-600 hover:text-blue-800">
+          <.link navigate={"/studies/#{@study_id}"} class="text-blue-600 hover:text-blue-800">
             ← Back to Study
           </.link>
         </div>

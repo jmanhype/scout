@@ -78,4 +78,17 @@ defmodule Scout.Store.Ecto do
       t -> {:ok, %{id: t.id, study: t.study_id, params: t.params, status: String.to_atom(t.status), rung: t.rung, score: t.score, metrics: t.metrics, error: t.error, seed: t.seed}}
     end
   end
+
+  @impl Scout.Store
+  def observations_at_rung(_study_id, _bracket, _rung) do
+    # For Ecto, we might need to store bracket info or simplify
+    # For now, return empty list as we're using simple record_observation
+    []
+  end
+
+  @impl Scout.Store
+  def record_observation(_study_id, trial_id, _bracket, rung, score) do
+    # Simplified version that ignores study_id and bracket
+    record_observation(trial_id, rung, score)
+  end
 end

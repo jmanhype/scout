@@ -36,17 +36,17 @@ defmodule Scout.Store.ETS do
   
   # Store behaviour implementation - reads can be direct
   
-  @impl Scout.Store
+  @impl Scout.Store.Adapter
   def put_study(%{id: id} = study) do
     GenServer.call(__MODULE__, {:put_study, id, study})
   end
   
-  @impl Scout.Store
+  @impl Scout.Store.Adapter
   def set_study_status(id, status) do
     GenServer.call(__MODULE__, {:set_study_status, id, status})
   end
   
-  @impl Scout.Store
+  @impl Scout.Store.Adapter
   def get_study(id) do
     case :ets.lookup(@studies, id) do
       [{^id, s}] -> {:ok, s}
@@ -54,31 +54,27 @@ defmodule Scout.Store.ETS do
     end
   end
   
-  @impl Scout.Store
   def add_trial(study_id, trial) do
     GenServer.call(__MODULE__, {:add_trial, study_id, trial})
   end
   
-  @impl Scout.Store
   def update_trial(id, updates) do
     GenServer.call(__MODULE__, {:update_trial, id, updates})
   end
   
-  @impl Scout.Store
   def record_observation(study_id, trial_id, bracket, rung, score) do
     # Use cast for performance since observations are write-heavy
     GenServer.cast(__MODULE__, {:record_observation, study_id, trial_id, bracket, rung, score})
     :ok
   end
   
-  @impl Scout.Store
+  @impl Scout.Store.Adapter
   def list_trials(_study_id, _filters \\ []) do
     # TODO: Actually filter by study_id once we store it properly
     :ets.foldl(fn {id, t}, acc -> [Map.put(t, :id, id) | acc] end, [], @trials) 
     |> Enum.reverse()
   end
   
-  @impl Scout.Store
   def fetch_trial(id) do
     case :ets.lookup(@trials, id) do
       [{^id, t}] -> {:ok, Map.put(t, :id, id)}
@@ -86,10 +82,65 @@ defmodule Scout.Store.ETS do
     end
   end
   
-  @impl Scout.Store
+  @impl Scout.Store.Adapter
   def observations_at_rung(study_id, bracket, rung) do
     :ets.lookup(@obs, {study_id, bracket, rung})
     |> Enum.map(fn {_key, trial_id, score} -> {trial_id, score} end)
+  end
+
+  # Implement missing Scout.Store.Adapter callbacks
+  @impl Scout.Store.Adapter  
+  def list_studies do
+    :ets.foldl(fn {_id, study}, acc -> [study | acc] end, [], @studies)
+    |> Enum.reverse()
+  end
+
+  @impl Scout.Store.Adapter
+  def delete_study(id) do
+    GenServer.call(__MODULE__, {:delete_study, id})
+  end
+
+  @impl Scout.Store.Adapter
+  def get_trial(_study_id, trial_id) do
+    case fetch_trial(trial_id) do
+      {:ok, trial} -> {:ok, trial}
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @impl Scout.Store.Adapter
+  def put_trial(study_id, trial) do
+    add_trial(study_id, trial)
+  end
+
+  @impl Scout.Store.Adapter
+  def update_trial(_study_id, trial_id, updates) do
+    case update_trial(trial_id, updates) do
+      :ok -> {:ok, nil}
+      error -> error
+    end
+  end
+
+  @impl Scout.Store.Adapter
+  def delete_trial(study_id, trial_id) do
+    GenServer.call(__MODULE__, {:delete_trial, study_id, trial_id})
+  end
+
+  @impl Scout.Store.Adapter
+  def put_observation(study_id, trial_id, observation) do
+    score = Map.get(observation, :score) || Map.get(observation, :value)
+    bracket = Map.get(observation, :bracket, 0)
+    rung = Map.get(observation, :rung, 0)
+    record_observation(study_id, trial_id, bracket, rung, score)
+    {:ok, observation}
+  end
+
+  @impl Scout.Store.Adapter
+  def list_observations(study_id, trial_id) do
+    pattern = {{study_id, :_, :_}, trial_id, :"$1"}
+    :ets.match(@obs, pattern)
+    |> List.flatten()
+    |> Enum.map(fn score -> %{value: score} end)
   end
   
   # Additional public functions for events
@@ -156,5 +207,22 @@ defmodule Scout.Store.ETS do
   def handle_cast({:mark_pruned, study_id, trial_id}, state) do
     :ets.insert(@events, {{study_id, :pruned}, trial_id})
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_call({:delete_study, id}, _from, state) do
+    :ets.delete(@studies, id)
+    # Delete related trials
+    trials_to_delete = :ets.foldl(fn {trial_id, _trial}, acc -> 
+      [trial_id | acc]
+    end, [], @trials)
+    Enum.each(trials_to_delete, &:ets.delete(@trials, &1))
+    {:reply, :ok, state}
+  end
+
+  @impl GenServer
+  def handle_call({:delete_trial, _study_id, trial_id}, _from, state) do
+    :ets.delete(@trials, trial_id)
+    {:reply, :ok, state}
   end
 end
