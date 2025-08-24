@@ -2,3 +2,11 @@
 /deps
 /.elixir_ls
 /priv/repo/*.db
+
+# Generated files
+*.csv
+*.json
+erl_crash.dump
+
+# Temporary files
+.DS_Store
