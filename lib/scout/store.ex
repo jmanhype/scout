@@ -22,19 +22,37 @@ defmodule Scout.Store do
   @doc """
   Returns a child specification for the configured storage adapter.
   """
+  @spec child_spec(term()) :: Supervisor.child_spec()
   def child_spec(arg), do: @adapter.child_spec(arg)
 
   # Facade delegates - no local state in this module
+  @spec put_study(map()) :: :ok | {:error, term()}
   def put_study(study), do: @adapter.put_study(study)
+  
+  @spec set_study_status(String.t(), String.t()) :: :ok | {:error, term()}
   def set_study_status(id, status), do: @adapter.set_study_status(id, status)
+  
+  @spec get_study(String.t()) :: {:ok, map()} | :error
   def get_study(id), do: @adapter.get_study(id)
+  
+  @spec add_trial(String.t(), map()) :: {:ok, String.t()} | {:error, term()}
   def add_trial(study_id, trial), do: @adapter.add_trial(study_id, trial)
+  
+  @spec update_trial(String.t(), map()) :: :ok | {:error, term()}
   def update_trial(id, updates), do: @adapter.update_trial(id, updates)
+  
+  @spec record_observation(String.t(), String.t(), non_neg_integer(), non_neg_integer(), number()) :: :ok
   def record_observation(study_id, trial_id, bracket, rung, score) do
     @adapter.record_observation(study_id, trial_id, bracket, rung, score)
   end
+  
+  @spec list_trials(String.t(), keyword()) :: [map()]
   def list_trials(study_id, filters \\ []), do: @adapter.list_trials(study_id, filters)
+  
+  @spec fetch_trial(String.t()) :: {:ok, map()} | :error
   def fetch_trial(id), do: @adapter.fetch_trial(id)
+  
+  @spec observations_at_rung(String.t(), non_neg_integer(), non_neg_integer()) :: [{String.t(), number()}]
   def observations_at_rung(study_id, bracket, rung) do
     @adapter.observations_at_rung(study_id, bracket, rung)
   end

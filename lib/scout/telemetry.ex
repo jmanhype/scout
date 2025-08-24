@@ -43,6 +43,7 @@ defmodule Scout.Telemetry do
     - measurements: Map with `:trials` key (number of trials to run)
     - metadata: Map with `:study` (study ID) and `:executor` (executor module)
   """
+  @spec study_start(map(), map()) :: :ok
   def study_start(measurements, metadata) do
     execute_safe(@study_start, measurements, metadata)
   end
@@ -54,6 +55,7 @@ defmodule Scout.Telemetry do
     - measurements: Map with `:completed` (trials completed) and optional `:duration`
     - metadata: Map with `:study` (study ID) and optional `:best` (best result)
   """
+  @spec study_stop(map(), map()) :: :ok
   def study_stop(measurements, metadata) do
     execute_safe(@study_stop, measurements, metadata)
   end
@@ -65,6 +67,7 @@ defmodule Scout.Telemetry do
     - measurements: Map with `:ix` (trial index)
     - metadata: Map with `:study`, `:trial_id`, `:bracket`, and `:params`
   """
+  @spec trial_start(map(), map()) :: :ok
   def trial_start(measurements, metadata) do
     execute_safe(@trial_start, measurements, metadata)
   end
@@ -76,6 +79,7 @@ defmodule Scout.Telemetry do
     - measurements: Map with optional `:duration`
     - metadata: Map with `:study`, `:trial_id`, `:score`, and `:status`
   """
+  @spec trial_stop(map(), map()) :: :ok
   def trial_stop(measurements, metadata) do
     execute_safe(@trial_stop, measurements, metadata)
   end
@@ -87,6 +91,7 @@ defmodule Scout.Telemetry do
     - measurements: Map with `:rung` (pruning rung)
     - metadata: Map with `:study`, `:trial_id`, and optional `:reason`
   """
+  @spec trial_prune(map(), map()) :: :ok
   def trial_prune(measurements, metadata) do
     execute_safe(@trial_prune, measurements, metadata)
   end

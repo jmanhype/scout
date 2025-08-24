@@ -53,6 +53,7 @@ defmodule Scout.Easy do
       IO.puts("Best: \#{result.best_value}")
       IO.puts("Params: \#{inspect(result.best_params)}")
   """
+  @spec optimize(function(), map(), keyword()) :: map()
   def optimize(objective, search_space, opts \\ []) do
     # Parse options with Optuna-like defaults
     n_trials = Keyword.get(opts, :n_trials, 100)
@@ -136,6 +137,7 @@ defmodule Scout.Easy do
       study = Scout.Easy.create_study(direction: :maximize)
       result = Scout.Easy.optimize_study(study, objective, n_trials: 50)
   """
+  @spec create_study(keyword()) :: map()
   def create_study(opts \\ []) do
     study_name = Keyword.get(opts, :study_name, "study_#{System.system_time(:second)}")
     direction = Keyword.get(opts, :direction, :minimize)
@@ -153,6 +155,7 @@ defmodule Scout.Easy do
   @doc """
   Load an existing study (like optuna.load_study).
   """
+  @spec load_study(String.t()) :: {:ok, map()} | {:error, term()}
   def load_study(study_name) do
     # In a real implementation, this would load from storage
     %{
