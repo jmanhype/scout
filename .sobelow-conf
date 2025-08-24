@@ -1,0 +1,23 @@
+# Sobelow configuration for Scout security scanning
+# See: https://github.com/nccgroup/sobelow
+
+# Skip these checks (with good reason)
+[
+  # Skip Config.Secrets check - we properly handle secrets via runtime config
+  ignore: ["Config.Secrets"],
+  
+  # Set confidence level (low, medium, high)
+  confidence: "low",
+  
+  # Exit with non-zero status on findings
+  exit: "low",
+  
+  # Verbose output for CI
+  verbose: true,
+  
+  # Skip files that are test-only
+  skip_files: ["test/", "examples/"],
+  
+  # Format for CI parsing
+  format: "txt"
+]

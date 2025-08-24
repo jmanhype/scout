@@ -1,0 +1,333 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  MIX_ENV: test
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  quality_gates:
+    name: Quality Gates
+    runs-on: ubuntu-20.04
+    
+    strategy:
+      matrix:
+        elixir: ['1.15', '1.16']
+        otp: ['25', '26']
+        
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scout_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ matrix.elixir }}
+        otp-version: ${{ matrix.otp }}
+        
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          deps
+          _build
+        key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+    - name: Install dependencies
+      run: |
+        mix deps.get
+        mix deps.compile
+
+    - name: Check compilation warnings
+      run: mix compile --warnings-as-errors
+
+    - name: Run security gates
+      run: |
+        # Test security gates work
+        echo "Testing security configuration..."
+        mix run -e "Scout.SecurityGates.check_all!()"
+
+    - name: Run tests with coverage
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/scout_test
+      run: |
+        mix test --warnings-as-errors --cover
+        
+    - name: Check test coverage threshold
+      run: |
+        # Extract coverage percentage and enforce minimum
+        COVERAGE=$(mix test --cover 2>&1 | grep -o '[0-9]*\.[0-9]*%' | head -1 | sed 's/%//')
+        echo "Test coverage: ${COVERAGE}%"
+        
+        # Enforce 80% minimum coverage
+        THRESHOLD=80.0
+        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+          echo "❌ Coverage $COVERAGE% is below threshold $THRESHOLD%"
+          exit 1
+        else
+          echo "✅ Coverage $COVERAGE% meets threshold $THRESHOLD%"
+        fi
+
+    - name: Run Credo (code analysis)
+      run: mix credo --strict
+
+    - name: Cache PLTs
+      uses: actions/cache@v4
+      with:
+        path: priv/plts
+        key: ${{ runner.os }}-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+    - name: Run Dialyzer (type checking)
+      run: |
+        mix dialyzer --plt
+        mix dialyzer --format dialyxir
+
+    - name: Run Sobelow (security analysis)
+      run: mix sobelow -i Config.Secrets --exit
+
+    - name: Verify no TODO/FIXME in production code
+      run: |
+        # Fail if TODO/FIXME found in lib/ (not test/)
+        if grep -r "TODO\|FIXME" lib/; then
+          echo "❌ Found TODO/FIXME in production code"
+          exit 1
+        else
+          echo "✅ No TODO/FIXME in production code"
+        fi
+
+    - name: Check for common security issues
+      run: |
+        # Check for dangerous patterns
+        echo "Checking for dangerous patterns..."
+        
+        # No String.to_atom on user input
+        if grep -r "String\.to_atom" lib/ --include="*.ex" | grep -v "# Safe:"; then
+          echo "❌ Found String.to_atom usage - use SafeAtoms instead"
+          exit 1
+        fi
+        
+        # No :public ETS tables
+        if grep -r ":public" lib/ --include="*.ex" | grep -v "# Safe:"; then
+          echo "❌ Found :public ETS table - use :protected"
+          exit 1
+        fi
+        
+        # No hardcoded secrets
+        if grep -rE "(password|secret|key)\s*=\s*[\"'][^\"']{8,}" lib/ --include="*.ex"; then
+          echo "❌ Found potential hardcoded secrets"
+          exit 1
+        fi
+        
+        echo "✅ Security pattern checks passed"
+
+    - name: Check documentation coverage
+      run: |
+        # Ensure all public functions have @doc
+        echo "Checking documentation coverage..."
+        
+        # This is a simplified check - in practice you'd use ex_doc with coverage
+        MISSING_DOCS=$(grep -r "def " lib/ --include="*.ex" | grep -v "defp\|# @doc\|@doc" | wc -l)
+        
+        if [ "$MISSING_DOCS" -gt 50 ]; then
+          echo "❌ Too many functions without documentation: $MISSING_DOCS"
+          exit 1
+        else
+          echo "✅ Documentation coverage acceptable"
+        fi
+
+    - name: Performance regression check
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/scout_test
+      run: |
+        # Run performance-sensitive tests
+        echo "Running performance regression tests..."
+        
+        # Test ETS operations scale reasonably
+        mix test test/scout/store/ets_invariants_test.exs --include performance
+        
+        # Could add more perf tests here
+        echo "✅ Performance regression checks passed"
+
+    - name: Generate coverage report
+      if: matrix.elixir == '1.16' && matrix.otp == '26'
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/scout_test
+      run: mix coveralls.json
+
+    - name: Upload coverage to Codecov
+      if: matrix.elixir == '1.16' && matrix.otp == '26'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./cover/excoveralls.json
+        fail_ci_if_error: true
+
+  integration_tests:
+    name: Integration Tests
+    runs-on: ubuntu-20.04
+    needs: quality_gates
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scout_integration_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16'
+        otp-version: '26'
+        
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          deps
+          _build
+        key: ${{ runner.os }}-mix-26-1.16-${{ hashFiles('**/mix.lock') }}
+
+    - name: Install dependencies
+      run: |
+        mix deps.get
+        mix deps.compile
+
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/scout_integration_test
+        MIX_ENV: test
+      run: |
+        # Run end-to-end optimization tests
+        echo "Running integration tests..."
+        
+        # Test actual optimization runs work
+        mix test --only integration
+        
+        # Test database migrations work
+        mix ecto.create
+        mix ecto.migrate
+        mix ecto.rollback --all
+        mix ecto.migrate
+        
+        echo "✅ Integration tests passed"
+
+    - name: Test Docker build
+      run: |
+        echo "Testing Docker build..."
+        docker build -t scout:test .
+        echo "✅ Docker build successful"
+
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-20.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  dependency_check:
+    name: Dependency Security Check
+    runs-on: ubuntu-20.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16'
+        otp-version: '26'
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Check for vulnerable dependencies
+      run: |
+        mix hex.audit
+        
+        # Check for outdated dependencies
+        mix hex.outdated
+        
+        echo "✅ Dependency security check passed"
+
+  build_and_deploy:
+    name: Build and Deploy Check
+    runs-on: ubuntu-20.04
+    needs: [quality_gates, integration_tests, security_scan]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build release
+      run: |
+        echo "Building production release..."
+        docker build -t scout:latest .
+        echo "✅ Production build successful"
+
+    - name: Deployment readiness check
+      run: |
+        echo "Checking deployment readiness..."
+        
+        # Check all required files exist
+        test -f Dockerfile
+        test -f docker-compose.yml
+        test -f mix.exs
+        
+        # Check configuration
+        test -d config/
+        test -f config/runtime.exs
+        
+        # Check migrations
+        test -d priv/repo/migrations/
+        
+        echo "✅ Deployment readiness check passed"

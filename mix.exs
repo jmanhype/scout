@@ -38,7 +38,15 @@ defmodule Scout.MixProject do
       {:plug_cowboy, "~> 2.7"},
       {:bandit, "~> 1.5"},
       {:jason, "~> 1.4"},
-      {:telemetry, "~> 1.2"}
+      {:telemetry, "~> 1.2"},
+      
+      # Development & Testing
+      {:stream_data, "~> 1.0", only: [:test]},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
+      {:ex_coveralls, "~> 0.18", only: [:test]},
+      {:mox, "~> 1.0", only: [:test]}
     ]
   end
 
@@ -46,7 +54,21 @@ defmodule Scout.MixProject do
     [
       setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"]
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      
+      # Quality assurance
+      quality: ["format", "credo --strict", "dialyzer", "sobelow -i Config.Secrets --exit"],
+      
+      # CI pipeline
+      ci: [
+        "compile --warnings-as-errors",
+        "test --warnings-as-errors --cover",
+        "quality"
+      ],
+      
+      # Test with coverage
+      test_coverage: ["coveralls.html"],
+      test_ci: ["coveralls.json"]
     ]
   end
 end
