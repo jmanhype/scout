@@ -16,6 +16,7 @@ defmodule ScoutDashboardWeb.Router do
     pipe_through :browser
     live "/", HomeLive, :index
     live "/studies/:id", DashboardLive, :show
+    live "/adaptive/:id", AdaptiveDashboardLive, :show
     get "/optimize/:study_id", OptimizeController, :run
     get "/populate/:study_id", PopulateController, :run
     get "/debug/:study_id", DebugController, :test
