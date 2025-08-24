@@ -1,0 +1,33 @@
+# Elixir build artifacts
+/_build
+/deps
+*.beam
+/erl_crash.dump
+.fetch
+
+# Test and development files  
+/test
+.elixir_ls
+*.log
+.DS_Store
+
+# Git and documentation
+.git
+.gitignore
+README.md
+docs/
+archive/
+
+# Proof scripts and demos
+prove_*.exs
+test_*.exs
+demo_*.exs
+hardcore_proof.exs
+*_proof.md
+PROOF_COMPLETE.md
+IRREFUTABLE_PROOF.md
+
+# Local config
+config/dev.exs
+config/test.exs
+.env

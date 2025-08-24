@@ -1,0 +1,63 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Scout Hyperparameter Optimization Dashboard",
+    "tags": ["scout", "optimization"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Studies",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "scout_active_studies_total",
+            "legendFormat": "Active Studies"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Total Trials",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "scout_trials_total",
+            "legendFormat": "Total Trials"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Trials per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(scout_trials_total[5m])",
+            "legendFormat": "Trials/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Study Convergence",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "scout_best_score",
+            "legendFormat": "Best Score - {{study_id}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

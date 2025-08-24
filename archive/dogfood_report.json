@@ -1,0 +1,22 @@
+{
+  "samplers": {
+    "missing": 2,
+    "implemented": 8,
+    "partial": 3,
+    "optuna_total": 10,
+    "coverage": "80%"
+  },
+  "pruners": {
+    "missing": 4,
+    "implemented": 2,
+    "optuna_total": 6,
+    "coverage": "33%"
+  },
+  "search_space": {
+    "missing": 3,
+    "implemented": 5,
+    "optuna_total": 8,
+    "coverage": "63%"
+  },
+  "overall_parity": "56%"
+}
