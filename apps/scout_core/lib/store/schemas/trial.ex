@@ -13,8 +13,8 @@ defmodule Scout.Store.Schemas.Trial do
   schema "trials" do
     field :number, :integer
     field :params, :map
-    field :value, :float
-    field :status, :string, default: "pending"
+    field :score, :float
+    field :status, Ecto.Enum, values: [:pending, :running, :succeeded, :failed, :pruned], default: :pending
     field :metadata, :map, default: %{}
     field :started_at, :utc_datetime
     field :completed_at, :utc_datetime
@@ -28,9 +28,8 @@ defmodule Scout.Store.Schemas.Trial do
   @doc false
   def changeset(trial, attrs) do
     trial
-    |> cast(attrs, [:id, :study_id, :number, :params, :value, :status, :metadata, :started_at, :completed_at])
-    |> validate_required([:id, :study_id, :number])
-    |> validate_inclusion(:status, ["pending", "running", "succeeded", "failed", "pruned"])
+    |> cast(attrs, [:id, :study_id, :number, :params, :score, :status, :metadata, :started_at, :completed_at])
+    |> validate_required([:id, :study_id, :number, :params, :status])
     |> foreign_key_constraint(:study_id)
     |> unique_constraint([:study_id, :id])
     |> unique_constraint([:study_id, :number])

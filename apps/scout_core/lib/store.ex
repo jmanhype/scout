@@ -74,4 +74,94 @@ defmodule Scout.Store do
 
   @spec health_check() :: :ok | {:error, term()}
   def health_check(), do: adapter().health_check()
+  
+  # ============================================================================
+  # EXPLICIT STATE TRANSITIONS (prevent leaky abstractions)
+  # ============================================================================
+  
+  @doc """
+  Start a new trial with proper state initialization.
+  
+  Enforces:
+  - Status must be :running
+  - Started_at timestamp is set
+  - Params are validated
+  """
+  @spec start_trial(study_id(), map(), non_neg_integer()) :: {:ok, trial_id()} | {:error, term()}
+  def start_trial(study_id, params, bracket \\ 0) do
+    trial_id = generate_trial_id()
+    
+    trial = %{
+      id: trial_id,
+      params: params,
+      bracket: bracket,
+      status: :running,
+      started_at: System.system_time(:millisecond)
+    }
+    
+    adapter().add_trial(study_id, trial)
+  end
+  
+  @doc """
+  Complete a trial successfully with score and metrics.
+  
+  Enforces:
+  - Status transition to :succeeded
+  - Finished_at timestamp is set
+  - Score is recorded
+  """
+  @spec finish_trial(study_id(), trial_id(), number(), map()) :: :ok | {:error, term()}
+  def finish_trial(study_id, trial_id, score, metrics \\ %{}) do
+    updates = %{
+      status: :succeeded,
+      score: score,
+      metrics: metrics,
+      finished_at: System.system_time(:millisecond)
+    }
+    
+    adapter().update_trial(study_id, trial_id, updates)
+  end
+  
+  @doc """
+  Mark a trial as failed with error information.
+  
+  Enforces:
+  - Status transition to :failed
+  - Error message is recorded
+  - Finished_at timestamp is set
+  """
+  @spec fail_trial(study_id(), trial_id(), String.t()) :: :ok | {:error, term()}
+  def fail_trial(study_id, trial_id, error_message) do
+    updates = %{
+      status: :failed,
+      error: error_message,
+      finished_at: System.system_time(:millisecond)
+    }
+    
+    adapter().update_trial(study_id, trial_id, updates)
+  end
+  
+  @doc """
+  Prune a trial at a specific rung with optional score.
+  
+  Enforces:
+  - Status transition to :pruned
+  - Records pruning rung
+  - Finished_at timestamp is set
+  """
+  @spec prune_trial(study_id(), trial_id(), non_neg_integer(), number() | nil) :: :ok | {:error, term()}
+  def prune_trial(study_id, trial_id, rung, score \\ nil) do
+    updates = %{
+      status: :pruned,
+      score: score,
+      metadata: %{pruned_at_rung: rung},
+      finished_at: System.system_time(:millisecond)
+    }
+    
+    adapter().update_trial(study_id, trial_id, updates)
+  end
+  
+  defp generate_trial_id do
+    Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+  end
 end

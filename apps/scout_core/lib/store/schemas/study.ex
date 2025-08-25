@@ -10,7 +10,8 @@ defmodule Scout.Store.Schemas.Study do
   @timestamps_opts [type: :utc_datetime]
   
   schema "studies" do
-    field :goal, :string
+    field :goal, Ecto.Enum, values: [:minimize, :maximize]
+    field :status, Ecto.Enum, values: [:pending, :running, :completed, :failed, :cancelled], default: :running
     field :search_space, :map
     field :metadata, :map, default: %{}
     field :max_trials, :integer
@@ -24,9 +25,8 @@ defmodule Scout.Store.Schemas.Study do
   @doc false
   def changeset(study, attrs) do
     study
-    |> cast(attrs, [:id, :goal, :search_space, :metadata, :max_trials])
-    |> validate_required([:id, :goal])
-    |> validate_inclusion(:goal, ["minimize", "maximize"])
+    |> cast(attrs, [:id, :goal, :status, :search_space, :metadata, :max_trials])
+    |> validate_required([:id, :goal, :status])
     |> unique_constraint(:id)
   end
 end
