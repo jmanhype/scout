@@ -72,7 +72,7 @@ defmodule Scout.Sampler.PriorTPE do
           study_id: "prior-study",
           params: params,
           score: score * weight,  # Weight the influence
-          status: :succeeded,
+          status: :completed,  # Purpose: use correct enum
           bracket: 0
         }
       end

@@ -270,7 +270,7 @@ defmodule Scout.StudyCoordinator do
           {:reply, {:error, reason}, state}
       end
     else
-      Logger.warn("Attempted to complete unknown trial: #{trial_id}")
+      Scout.Log.warning("Attempted to complete unknown trial: #{trial_id}")
       {:reply, {:error, :trial_not_active}, state}
     end
   end
@@ -309,7 +309,7 @@ defmodule Scout.StudyCoordinator do
           {:reply, {:error, reason}, state}
       end
     else
-      Logger.warn("Attempted to fail unknown trial: #{trial_id}")
+      Scout.Log.warning("Attempted to fail unknown trial: #{trial_id}")
       {:reply, {:error, :trial_not_active}, state}
     end
   end

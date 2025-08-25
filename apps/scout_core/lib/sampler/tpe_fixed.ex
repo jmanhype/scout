@@ -105,7 +105,7 @@ defmodule Scout.Sampler.TPEFixed do
       end
     rescue
       error ->
-        Logger.warn("TPE sampling failed: #{inspect(error)}, falling back to random")
+        Scout.Log.warning("TPE sampling failed: #{inspect(error)}, falling back to random")
         sample_random(state, search_space, trial_index)
     end
   end
@@ -188,7 +188,7 @@ defmodule Scout.Sampler.TPEFixed do
           
         _ ->
           # Unknown parameter type - sample uniformly
-          Logger.warn("Unknown parameter type for #{param_name}, using uniform sampling")
+          Scout.Log.warning("Unknown parameter type for #{param_name}, using uniform sampling")
           {param_name, :rand.uniform()}
       end
     end

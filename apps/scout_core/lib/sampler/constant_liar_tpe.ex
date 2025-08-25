@@ -65,7 +65,7 @@ defmodule Scout.Sampler.ConstantLiarTPE do
           study_id: "constant-liar-study",  # Placeholder study ID
           params: pending.params,
           score: liar_value,
-          status: :succeeded,
+          status: :completed,  # Purpose: use correct enum
           bracket: 0
         }
       end)
@@ -77,7 +77,7 @@ defmodule Scout.Sampler.ConstantLiarTPE do
   # Calculate the constant liar value based on strategy
   defp calculate_liar_value(history, state) do
     completed = Enum.filter(history, fn t -> 
-      t.status == :succeeded and is_number(t.score)
+      t.status == :completed and is_number(t.score)  # Purpose: use correct enum
     end)
     
     if Enum.empty?(completed) do

@@ -76,7 +76,7 @@ defmodule Scout.TelemetryEnhanced do
 
   @doc "Trial timed out"
   def trial_timeout(measurements \\ %{}, metadata) do
-    Logger.warn("Trial timeout: #{format_context(metadata)}")
+    Scout.Log.warning("Trial timeout: #{format_context(metadata)}")
     emit_event([:scout, :trial, :timeout],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
@@ -145,7 +145,7 @@ defmodule Scout.TelemetryEnhanced do
 
   @doc "Sampler fell back to random sampling"
   def sampler_fallback(measurements \\ %{}, metadata) do
-    Logger.warn("Sampler fallback: #{format_context(metadata)}")
+    Scout.Log.warning("Sampler fallback: #{format_context(metadata)}")
     emit_event([:scout, :sampler, :fallback],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
@@ -210,7 +210,7 @@ defmodule Scout.TelemetryEnhanced do
 
   @doc "Executor operation timeout"
   def executor_timeout(measurements \\ %{}, metadata) do
-    Logger.warn("Executor timeout: #{format_context(metadata)}")
+    Scout.Log.warning("Executor timeout: #{format_context(metadata)}")
     emit_event([:scout, :executor, :timeout],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
@@ -307,11 +307,11 @@ defmodule Scout.TelemetryEnhanced do
   end
 
   def handle_event([:scout, _, _, :timeout] = event, _measurements, metadata, _config) do  
-    Logger.warn("Scout timeout: #{inspect(event)} #{format_context(metadata)}")
+    Scout.Log.warning("Scout timeout: #{inspect(event)} #{format_context(metadata)}")
   end
 
   def handle_event([:scout, _, _, :fallback] = event, _measurements, metadata, _config) do
-    Logger.warn("Scout fallback: #{inspect(event)} #{format_context(metadata)}")
+    Scout.Log.warning("Scout fallback: #{inspect(event)} #{format_context(metadata)}")
   end
 
   def handle_event([:scout, :study, :start] = event, _measurements, metadata, _config) do

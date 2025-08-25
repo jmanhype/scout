@@ -53,7 +53,7 @@ defmodule Scout.SecurityGates do
   defp check_atom_safety! do
     # Verify no dangerous atom conversion patterns in compiled code
     # This is a compile-time check - real protection is using SafeAtoms
-    Logger.warn("""
+    Scout.Log.warning("""
     ATOM SAFETY: Ensure all user input uses Scout.Util.SafeAtoms, never String.to_atom/1.
     This check is informational - rely on code review and static analysis.
     """)

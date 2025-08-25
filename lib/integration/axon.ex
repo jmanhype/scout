@@ -1,5 +1,11 @@
 defmodule Scout.Integration.Axon do
   @moduledoc """
+  Optional Axon integration. Enabled via `config :scout, :features, axon: true`.
+  """
+  @enabled Application.compile_env(:scout, [:features, :axon], false)
+
+  if @enabled do
+  @moduledoc """
   Integration with Axon neural network library for Elixir.
   
   Provides hyperparameter optimization for:
@@ -246,5 +252,11 @@ defmodule Scout.Integration.Axon do
   
   defp suggest_latent_dim(input_size) do
     max(2, round(:math.log2(input_size)))
+  end
+  else
+    # Purpose: compile-time disabled, no UUID dep needed
+    def train_with_pruning(_model, _data, _params, _opts), do: {:error, :axon_disabled}
+    def train_with_hyperband(_model, _data, _params, _opts), do: {:error, :axon_disabled}
+    def suggest_architecture(_input, _output, _task), do: {:error, :axon_disabled}
   end
 end
