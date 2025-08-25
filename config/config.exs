@@ -12,8 +12,9 @@ config :scout, Scout.Repo,
 
 config :scout, 
   ecto_repos: [Scout.Repo],
-  # Storage adapter: Scout.Store.ETS or Scout.Store.Postgres
-  store_adapter: Scout.Store.ETS
+  # Storage adapter: Scout.Store.Postgres (recommended for production)
+  # Use Scout.Store.ETS for testing/development without DB
+  store_adapter: Scout.Store.Postgres
 
 # Dashboard is a separate OTP app config; default OFF for safety
 config :scout_dashboard,

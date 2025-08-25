@@ -14,9 +14,9 @@ defmodule ScoutDashboardWeb.PopulateController do
         params: %{x: :rand.uniform() * 10 - 5, y: :rand.uniform() * 10 - 5},
         bracket: 0,
         score: :rand.uniform() * 20,
-        status: :succeeded,
-        started_at: System.system_time(:millisecond),
-        finished_at: System.system_time(:millisecond)
+        status: :completed,
+        started_at: DateTime.utc_now(),
+        completed_at: DateTime.utc_now()
       }
       Scout.Store.add_trial(study_id, trial)
     end

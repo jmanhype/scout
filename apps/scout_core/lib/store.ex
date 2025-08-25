@@ -7,13 +7,13 @@ defmodule Scout.Store do
   
   ## Available Adapters
   
-  - `Scout.Store.ETS` (default) - In-memory storage, fast but non-persistent
-  - `Scout.Store.Postgres` - PostgreSQL storage, persistent and distributed-ready
+  - `Scout.Store.Postgres` - PostgreSQL storage, persistent and distributed-ready (default)
+  - `Scout.Store.ETS` - In-memory storage, fast but non-persistent
   
   ## Configuration
   
       # Runtime configuration (preferred - not compile-time locked)
-      config :scout, :store_adapter, Scout.Store.ETS
+      config :scout, :store_adapter, Scout.Store.Postgres
   """
 
   alias Scout.Store.Adapter
@@ -106,17 +106,17 @@ defmodule Scout.Store do
   Complete a trial successfully with score and metrics.
   
   Enforces:
-  - Status transition to :succeeded
-  - Finished_at timestamp is set
+  - Status transition to :completed
+  - Completed_at timestamp is set
   - Score is recorded
   """
   @spec finish_trial(study_id(), trial_id(), number(), map()) :: :ok | {:error, term()}
   def finish_trial(study_id, trial_id, score, metrics \\ %{}) do
     updates = %{
-      status: :succeeded,
+      status: :completed,
       score: score,
       metrics: metrics,
-      finished_at: System.system_time(:millisecond)
+      completed_at: DateTime.utc_now()
     }
     
     adapter().update_trial(study_id, trial_id, updates)
@@ -128,14 +128,14 @@ defmodule Scout.Store do
   Enforces:
   - Status transition to :failed
   - Error message is recorded
-  - Finished_at timestamp is set
+  - Completed_at timestamp is set
   """
   @spec fail_trial(study_id(), trial_id(), String.t()) :: :ok | {:error, term()}
   def fail_trial(study_id, trial_id, error_message) do
     updates = %{
       status: :failed,
       error: error_message,
-      finished_at: System.system_time(:millisecond)
+      completed_at: DateTime.utc_now()
     }
     
     adapter().update_trial(study_id, trial_id, updates)
@@ -147,7 +147,7 @@ defmodule Scout.Store do
   Enforces:
   - Status transition to :pruned
   - Records pruning rung
-  - Finished_at timestamp is set
+  - Completed_at timestamp is set
   """
   @spec prune_trial(study_id(), trial_id(), non_neg_integer(), number() | nil) :: :ok | {:error, term()}
   def prune_trial(study_id, trial_id, rung, score \\ nil) do
@@ -155,7 +155,7 @@ defmodule Scout.Store do
       status: :pruned,
       score: score,
       metadata: %{pruned_at_rung: rung},
-      finished_at: System.system_time(:millisecond)
+      completed_at: DateTime.utc_now()
     }
     
     adapter().update_trial(study_id, trial_id, updates)

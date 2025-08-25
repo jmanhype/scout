@@ -14,7 +14,7 @@ defmodule Scout.Store.Schemas.Trial do
     field :number, :integer
     field :params, :map
     field :score, :float
-    field :status, Ecto.Enum, values: [:pending, :running, :succeeded, :failed, :pruned], default: :pending
+    field :status, Ecto.Enum, values: [:pending, :running, :completed, :failed, :pruned], default: :pending
     field :metadata, :map, default: %{}
     field :started_at, :utc_datetime
     field :completed_at, :utc_datetime

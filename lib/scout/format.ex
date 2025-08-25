@@ -6,8 +6,9 @@ defmodule Scout.Format do
   Uses JSON schemas to validate payloads in dev/test.
   """
   
-  @study_schema File.read!("priv/schema/study.schema.json") |> Jason.decode!()
-  @trial_schema File.read!("priv/schema/trial.schema.json") |> Jason.decode!()
+  # Load schemas from priv dir at compile time
+  @study_schema Path.join(["priv", "schema", "study.schema.json"]) |> File.read!() |> Jason.decode!()
+  @trial_schema Path.join(["priv", "schema", "trial.schema.json"]) |> File.read!() |> Jason.decode!()
   
   @doc """
   Validate a study map against the JSON schema.
@@ -66,7 +67,7 @@ defmodule Scout.Format do
     required = Map.get(schema, "required", [])
     
     missing = Enum.reject(required, fn field ->
-      Map.has_key?(data, field) or Map.has_key?(data, String.to_atom(field))
+      Map.has_key?(data, field) or Map.has_key?(data, String.to_existing_atom(field))
     end)
     
     if Enum.empty?(missing) do
