@@ -8,7 +8,7 @@ defmodule ScoutDashboardWeb.PopulateController do
     
     # Create some sample trials
     for i <- 1..10 do
-      trial = %Scout.Trial{
+      trial = %{
         id: "trial_#{i}",
         study_id: study_id,
         params: %{x: :rand.uniform() * 10 - 5, y: :rand.uniform() * 10 - 5},
