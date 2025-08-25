@@ -229,8 +229,8 @@ defmodule Scout.Store.Postgres do
       study_id: trial.study_id,
       number: trial.number,
       params: trial.params,
-      value: trial.value,
-      status: String.to_existing_atom(trial.status),
+      score: trial.score,              # was: value: trial.value
+      status: trial.status,            # was: String.to_existing_atom(trial.status)
       metadata: trial.metadata || %{},
       started_at: trial.started_at,
       completed_at: trial.completed_at,

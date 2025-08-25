@@ -25,6 +25,9 @@ defmodule Scout.MixProject do
 
   defp deps do
     [
+      # Internal apps (temporary until proper umbrella split)
+      {:scout_core, path: "apps/scout_core"},
+      
       # Database & Jobs
       {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},

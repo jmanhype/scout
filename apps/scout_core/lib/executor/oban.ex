@@ -37,7 +37,7 @@ end
 
 defmodule Scout.Executor.Oban.TrialWorker do
   use Oban.Worker, queue: :scout_trials, max_attempts: 3
-  alias Scout.{Store, Trial, Telemetry, Util.Seed}
+  alias Scout.{Store, Telemetry, Util.Seed}
 
   @impl true
   def perform(%Oban.Job{args: args}) do
@@ -62,9 +62,8 @@ defmodule Scout.Executor.Oban.TrialWorker do
     history = Store.list_trials(study_id)
     {params, _} = sampler_mod.next(search_space_fun, ix, history, sampler_state)
 
-    id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    t = %Trial{id: id, study_id: study_id, params: params, bracket: 0, status: :running, started_at: now(), seed: elem(Seed.seed_for(study_id, ix, base_seed), 1)}
-    {:ok, _} = Store.add_trial(study_id, t)
+    # Purpose: Use Store.start_trial/3 instead of crafting %Trial{} directly
+    {:ok, id} = Store.start_trial(study_id, params, 0)
     Telemetry.trial_started(study_id, id, ix, params)
 
     goal = safe_goal_atom(args["goal"] || "maximize")
@@ -77,15 +76,16 @@ defmodule Scout.Executor.Oban.TrialWorker do
 
     case result do
       {:ok, score, metrics} ->
-        # FIXED: Handle store write errors - don't ignore return values
-        case Store.update_trial(study_id, id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()}) do
+        # Purpose: Use Store.finish_trial/4 facade method
+        case Store.finish_trial(study_id, id, score, metrics) do
           :ok -> 
             Telemetry.trial_completed(study_id, id, score, 0, :completed)
           {:error, reason} ->
             Telemetry.trial_completed(study_id, id, 0.0, 0, :failed, %{error: "store_update_failed: #{inspect(reason)}"})
         end
       {:error, reason} ->
-        case Store.update_trial(study_id, id, %{status: :failed, error: inspect(reason), finished_at: now()}) do
+        # Purpose: Use Store.fail_trial/3 facade method
+        case Store.fail_trial(study_id, id, inspect(reason)) do
           :ok -> :ok
           {:error, store_error} ->
             Telemetry.error_occurred(:oban_executor, :store_error, "store_update_failed: #{inspect(store_error)}", %{study_id: study_id, trial_id: id})

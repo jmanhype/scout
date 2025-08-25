@@ -4,7 +4,7 @@ defmodule Scout.Executor.Local do
   
   @behaviour Scout.Executor
   
-  alias Scout.{Store, Trial, Telemetry, Util.Seed}
+  alias Scout.{Store, Telemetry, Util.Seed}
 
   @impl Scout.Executor
   def run(study) do
@@ -33,11 +33,13 @@ defmodule Scout.Executor.Local do
     history = Scout.Store.list_trials(study.id)
     {params, _state2} = sampler_mod.next(study.search_space, ix, history, sampler_state)
 
-    id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    {:exsss, {a, _, _}} = Seed.seed_for(study.id, ix, base_seed)
-    t = %Trial{id: id, study_id: study.id, params: params, bracket: 0, status: :running, started_at: now(), seed: a}
-    {:ok, _} = Scout.Store.add_trial(study.id, t)
+    # Purpose: Use Store.start_trial/3 instead of crafting %Trial{} directly
+    {:ok, id} = Scout.Store.start_trial(study.id, params, 0)
     Telemetry.trial_started(study.id, id, ix, params)
+    
+    # Build minimal map for return value only
+    started_at = now()
+    t = %{id: id, study_id: study.id, params: params, bracket: 0, started_at: started_at}
 
     result =
       case safe_objective(study.objective, params) do
@@ -51,15 +53,17 @@ defmodule Scout.Executor.Local do
     t2 =
       case result do
         {:ok, score, metrics} ->
-          _ = Scout.Store.update_trial(study.id, id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()})
+          # Purpose: Use Store.finish_trial/4 facade method
+          :ok = Scout.Store.finish_trial(study.id, id, score, metrics)
           dur = now() - t.started_at
           Telemetry.trial_completed(study.id, id, score, dur * 1000, :completed)
-          %Trial{t | status: :succeeded, score: score, metrics: metrics, finished_at: now()}
+          Map.merge(t, %{status: :completed, score: score, metrics: metrics, completed_at: now()})
         {:error, reason} ->
-          _ = Scout.Store.update_trial(study.id, id, %{status: :failed, error: inspect(reason), finished_at: now()})
+          # Purpose: Use Store.fail_trial/3 facade method
+          :ok = Scout.Store.fail_trial(study.id, id, inspect(reason))
           dur = now() - t.started_at
           Telemetry.trial_completed(study.id, id, 0.0, dur * 1000, :failed, %{error: inspect(reason)})
-          %Trial{t | status: :failed, error: inspect(reason), finished_at: now()}
+          Map.merge(t, %{status: :failed, error: inspect(reason), completed_at: now()})
       end
     t2
   end
@@ -70,7 +74,7 @@ defmodule Scout.Executor.Local do
 
   defp pick_best(trials, :maximize), do: Enum.max_by(trials, & &1.score, fn -> nil end)
   defp pick_best(trials, :minimize), do: Enum.min_by(trials, & &1.score, fn -> nil end)
-  defp best_to_result(%Trial{params: p, score: s}), do: {:ok, %{best_params: p, best_score: s}}
+  defp best_to_result(%{params: p, score: s}), do: {:ok, %{best_params: p, best_score: s}}
   defp best_to_result(_), do: {:error, :no_trials}
   defp now, do: System.system_time(:millisecond)
 end

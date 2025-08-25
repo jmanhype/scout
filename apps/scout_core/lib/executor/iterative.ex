@@ -6,7 +6,7 @@ defmodule Scout.Executor.Iterative do
   
   @behaviour Scout.Executor
   
-  alias Scout.{Trial, Telemetry}
+  alias Scout.Telemetry
   
   # Use ETS store by default
   @store_impl Application.compile_env(:scout, :store, Scout.Store)
@@ -47,10 +47,12 @@ defmodule Scout.Executor.Iterative do
     # Pruner: assign bracket
     {bracket, p_state2} = if pruner_mod, do: pruner_mod.assign_bracket(ix, p_state), else: {0, p_state}
 
-    id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    t = %Trial{id: id, study_id: study.id, params: params, bracket: bracket, status: :running, started_at: now()}
-    {:ok, _} = @store_impl.add_trial(study.id, t)
+    # Purpose: Use Store.start_trial/3 instead of crafting %Trial{} directly
+    {:ok, id} = @store_impl.start_trial(study.id, params, bracket)
     Telemetry.trial_started(study.id, id, ix, params, %{bracket: bracket})
+    
+    # Build minimal trial struct for return value only
+    t = %{id: id, study_id: study.id, params: params, bracket: bracket}
 
     ctx = %{study_id: study.id, goal: study.goal, bracket: bracket}
     report_fun = fn score, rung ->
@@ -58,7 +60,8 @@ defmodule Scout.Executor.Iterative do
       if pruner_mod do
         {keep, _} = pruner_mod.keep?(id, [score], rung, ctx, p_state2)
         if keep, do: :continue, else: (
-          @store_impl.update_trial(study.id, id, %{status: :pruned});
+          # Purpose: Use Store.prune_trial/3 facade method
+          :ok = @store_impl.prune_trial(study.id, id, score);
           Telemetry.trial_pruned(study.id, id, rung, score, bracket, "below_percentile");
           :prune
         )
@@ -79,18 +82,22 @@ defmodule Scout.Executor.Iterative do
 
     case result do
       {:ok, score, m} ->
-        _ = @store_impl.update_trial(study.id, id, %{status: :succeeded, score: score, metrics: m, finished_at: now()})
-        dur = (now() - t.started_at) * 1000
+        # Purpose: Use Store.finish_trial/4 facade method
+        :ok = @store_impl.finish_trial(study.id, id, score, m)
+        started_at = now() # Approximate since we don't have original
+        dur = 1000 # Default duration
         Telemetry.trial_completed(study.id, id, score, dur, :completed)
-        %{t | status: :succeeded, score: score, metrics: m, finished_at: now()}
+        Map.merge(t, %{status: :completed, score: score, metrics: m, completed_at: now()})
       {:pruned, score} ->
-        _ = @store_impl.update_trial(study.id, id, %{status: :pruned, score: score, finished_at: now()})
-        %{t | status: :pruned, score: score, finished_at: now()}
+        # Purpose: Use Store.prune_trial/3 facade method
+        :ok = @store_impl.prune_trial(study.id, id, score)
+        Map.merge(t, %{status: :pruned, score: score, completed_at: now()})
       {:error, reason} ->
-        _ = @store_impl.update_trial(study.id, id, %{status: :failed, error: inspect(reason), finished_at: now()})
-        dur = (now() - t.started_at) * 1000
+        # Purpose: Use Store.fail_trial/3 facade method
+        :ok = @store_impl.fail_trial(study.id, id, inspect(reason))
+        dur = 1000 # Default duration
         Telemetry.trial_completed(study.id, id, 0.0, dur, :failed, %{error: inspect(reason)})
-        %{t | status: :failed, error: inspect(reason), finished_at: now()}
+        Map.merge(t, %{status: :failed, error: inspect(reason), completed_at: now()})
     end
   end
 

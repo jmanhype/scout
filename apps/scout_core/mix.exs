@@ -1,9 +1,9 @@
-defmodule Scout.MixProject do
+defmodule ScoutCore.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :scout,
+      app: :scout_core,
       version: "0.3.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
