@@ -13,8 +13,7 @@ defmodule Scout.Executor.Iterative do
 
   @impl Scout.Executor
   def run(study) do
-    base_seed = study.seed || :erlang.unique_integer([:positive])
-    :rand.seed(:exsss, {base_seed, 1, 1})
+    # Don't pollute global RNG state - seed will be set per-trial
     :ok = @store_impl.put_study(%{id: study.id, goal: study.goal})
 
     Telemetry.study_event(:start, %{trials: study.max_trials}, %{study: study.id, executor: :iterative})
@@ -58,7 +57,7 @@ defmodule Scout.Executor.Iterative do
       if pruner_mod do
         {keep, _} = pruner_mod.keep?(id, [score], rung, ctx, p_state2)
         if keep, do: :continue, else: (
-          @store_impl.update_trial(id, %{status: :pruned});
+          @store_impl.update_trial(study.id, id, %{status: :pruned});
           Telemetry.trial_event(:prune, %{rung: rung, score: score}, %{study: study.id, trial_id: id, bracket: bracket});
           :prune
         )
@@ -79,14 +78,14 @@ defmodule Scout.Executor.Iterative do
 
     case result do
       {:ok, score, m} ->
-        _ = @store_impl.update_trial(id, %{status: :succeeded, score: score, metrics: m, finished_at: now()})
+        _ = @store_impl.update_trial(study.id, id, %{status: :succeeded, score: score, metrics: m, finished_at: now()})
         Telemetry.trial_event(:stop, %{score: score}, %{study: study.id, trial_id: id})
         %{t | status: :succeeded, score: score, metrics: m, finished_at: now()}
       {:pruned, score} ->
-        _ = @store_impl.update_trial(id, %{status: :pruned, score: score, finished_at: now()})
+        _ = @store_impl.update_trial(study.id, id, %{status: :pruned, score: score, finished_at: now()})
         %{t | status: :pruned, score: score, finished_at: now()}
       {:error, reason} ->
-        _ = @store_impl.update_trial(id, %{status: :failed, error: inspect(reason), finished_at: now()})
+        _ = @store_impl.update_trial(study.id, id, %{status: :failed, error: inspect(reason), finished_at: now()})
         Telemetry.trial_event(:error, %{}, %{study: study.id, trial_id: id, reason: inspect(reason)})
         %{t | status: :failed, error: inspect(reason), finished_at: now()}
     end

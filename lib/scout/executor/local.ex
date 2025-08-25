@@ -48,11 +48,11 @@ defmodule Scout.Executor.Local do
     t2 =
       case result do
         {:ok, score, metrics} ->
-          _ = Scout.Store.update_trial(id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()})
+          _ = Scout.Store.update_trial(study.id, id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()})
           Telemetry.trial_event(:stop, %{score: score}, %{study: study.id, trial_id: id})
           %Trial{t | status: :succeeded, score: score, metrics: metrics, finished_at: now()}
         {:error, reason} ->
-          _ = Scout.Store.update_trial(id, %{status: :failed, error: inspect(reason), finished_at: now()})
+          _ = Scout.Store.update_trial(study.id, id, %{status: :failed, error: inspect(reason), finished_at: now()})
           Telemetry.trial_event(:error, %{}, %{study: study.id, trial_id: id, reason: inspect(reason)})
           %Trial{t | status: :failed, error: inspect(reason), finished_at: now()}
       end

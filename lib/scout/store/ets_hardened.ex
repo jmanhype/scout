@@ -14,7 +14,7 @@ defmodule Scout.Store.ETSHardened do
   - :scout_observations -> {trial_id, bracket, rung, score}
   """
 
-  @behaviour Scout.StoreBehaviour
+  @behaviour Scout.Store.Adapter
   
   use GenServer
   require Logger
@@ -41,7 +41,7 @@ defmodule Scout.Store.ETSHardened do
     }
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def put_study(study) when is_map(study) do
     with {:ok, study_id} <- extract_study_id(study),
          :ok <- validate_study(study) do
@@ -49,14 +49,14 @@ defmodule Scout.Store.ETSHardened do
     end
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def set_study_status(study_id, status) when is_binary(study_id) do
     with {:ok, status_atom} <- safe_status_atom(status) do
       GenServer.call(__MODULE__, {:set_study_status, study_id, status_atom})
     end
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def get_study(study_id) when is_binary(study_id) do
     case :ets.lookup(@tbl_studies, study_id) do
       [{^study_id, study}] -> {:ok, study}
@@ -64,7 +64,7 @@ defmodule Scout.Store.ETSHardened do
     end
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def add_trial(study_id, trial) when is_binary(study_id) and is_map(trial) do
     with {:ok, trial_id} <- extract_or_generate_trial_id(trial),
          {:ok, index} <- extract_trial_index(trial),
@@ -73,18 +73,18 @@ defmodule Scout.Store.ETSHardened do
     end
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def update_trial(trial_id, updates) when is_binary(trial_id) and is_map(updates) do
     GenServer.call(__MODULE__, {:update_trial, trial_id, updates})
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def record_observation(trial_id, bracket, rung, score) 
       when is_binary(trial_id) and is_integer(bracket) and is_integer(rung) and is_number(score) do
     GenServer.call(__MODULE__, {:record_observation, trial_id, bracket, rung, score})
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def observations_at_rung(study_id, bracket, rung) 
       when is_binary(study_id) and is_integer(bracket) and is_integer(rung) do
     # Get trials for this study at bracket
@@ -96,7 +96,7 @@ defmodule Scout.Store.ETSHardened do
     end
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def list_trials(study_id, filters) when is_binary(study_id) do
     status_filter = Keyword.get(filters, :status)
     limit = Keyword.get(filters, :limit)
@@ -124,7 +124,7 @@ defmodule Scout.Store.ETSHardened do
     if limit, do: Enum.take(trials, limit), else: trials
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def fetch_trial(trial_id) when is_binary(trial_id) do
     case :ets.lookup(@tbl_trials, trial_id) do
       [{^trial_id, study_id, index, status, payload}] ->
@@ -139,12 +139,12 @@ defmodule Scout.Store.ETSHardened do
     end
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def delete_study(study_id) when is_binary(study_id) do
     GenServer.call(__MODULE__, {:delete_study, study_id})
   end
 
-  @impl Scout.StoreBehaviour
+  @impl Scout.Store.Adapter
   def health_check() do
     try do
       case Process.alive?(Process.whereis(__MODULE__)) do

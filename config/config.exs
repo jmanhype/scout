@@ -12,10 +12,14 @@ config :scout, Scout.Repo,
 
 config :scout, 
   ecto_repos: [Scout.Repo],
-  # Set to false to disable the dashboard (useful for library-only usage)
-  dashboard_enabled: true,
   # Storage adapter: Scout.Store.ETS or Scout.Store.Ecto
   store_adapter: Scout.Store.ETS
+
+# Dashboard is a separate OTP app config; default OFF for safety
+config :scout_dashboard,
+  enabled: false,
+  # set a 32+ char secret in prod to enable
+  secret: System.get_env("SCOUT_DASHBOARD_SECRET")
 
 config :scout, ScoutDashboardWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
