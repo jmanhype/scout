@@ -4,9 +4,9 @@ defmodule Scout.Sampler.RandomSearch do
   
   def init(opts), do: opts || %{}
   
-  def next(space_or_fun, _ix, _history, state) do
+  def next(space_or_fun, ix, _history, state) do
     # Handle both function and direct spec
-    spec = if is_function(space_or_fun), do: space_or_fun.(), else: space_or_fun
+    spec = if is_function(space_or_fun), do: space_or_fun.(ix), else: space_or_fun
     params = Scout.SearchSpace.sample(spec)
     {params, state}
   end

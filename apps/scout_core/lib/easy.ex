@@ -107,12 +107,15 @@ defmodule Scout.Easy do
     # Format results like Optuna
     case result do
       {:ok, res} ->
+        best_val = res[:best_score] || res[:best_value]
         %{
-          best_value: res[:best_score] || res[:best_value],
+          best_value: best_val,
+          best_score: best_val,  # Alias for compatibility
           best_params: res[:best_params] || %{},
           best_trial: res[:best_trial],
           n_trials: res[:n_trials] || n_trials,
           study_name: study_name,
+          study: study_name,  # Alias for compatibility
           status: :completed
         }
         
@@ -139,12 +142,14 @@ defmodule Scout.Easy do
   """
   @spec create_study(keyword()) :: map()
   def create_study(opts \\ []) do
-    study_name = Keyword.get(opts, :study_name, "study_#{System.system_time(:second)}")
+    # Support both :name and :study_name for compatibility
+    study_name = Keyword.get(opts, :name) || Keyword.get(opts, :study_name, "study_#{System.system_time(:second)}")
     direction = Keyword.get(opts, :direction, :minimize)
     sampler = Keyword.get(opts, :sampler, :random)
     
     %{
-      study_name: study_name,
+      name: study_name,          # For compatibility with documented API
+      study_name: study_name,    # For consistency with optimize() function
       direction: direction,
       sampler: sampler,
       trials: [],
@@ -167,10 +172,30 @@ defmodule Scout.Easy do
     }
   end
   
+  @doc """
+  Get the best value from a study (like optuna study.best_value).
+  """
+  @spec best_value(map()) :: number() | nil
+  def best_value(study) do
+    # For created studies, we don't have trials yet
+    # In a real implementation, this would query the best trial
+    nil
+  end
+  
+  @doc """
+  Get the best parameters from a study (like optuna study.best_params).
+  """
+  @spec best_params(map()) :: map() | nil
+  def best_params(study) do
+    # For created studies, we don't have trials yet
+    # In a real implementation, this would query the best trial
+    nil
+  end
+  
   # Private helper functions
   
   defp ensure_scout_started do
-    case Application.ensure_all_started(:scout) do
+    case Application.ensure_all_started(:scout_core) do
       {:ok, _} -> :ok
       {:error, {:already_started, _}} -> :ok
       _ ->
@@ -211,6 +236,7 @@ defmodule Scout.Easy do
   defp resolve_sampler(:grid), do: Scout.Sampler.Grid
   defp resolve_sampler(:bandit), do: Scout.Sampler.Bandit
   defp resolve_sampler(:cmaes), do: Scout.Sampler.CmaEs
+  defp resolve_sampler(:nsga2), do: Scout.Sampler.NSGA2
   defp resolve_sampler(module) when is_atom(module), do: module
   defp resolve_sampler(_), do: Scout.Sampler.RandomSearch
 

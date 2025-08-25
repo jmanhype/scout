@@ -96,7 +96,8 @@ defmodule Scout.Store do
       params: params,
       bracket: bracket,
       status: :running,
-      started_at: System.system_time(:millisecond)
+      started_at: System.system_time(:millisecond),
+      score: nil  # Required field for samplers like TPE
     }
     
     adapter().add_trial(study_id, trial)

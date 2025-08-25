@@ -75,6 +75,10 @@ defmodule Scout.Executor.Iterative do
         {:ok, score, m} -> {:ok, score, m}
         {:ok, score} when is_number(score) -> {:ok, score, %{}}
         score when is_number(score) -> {:ok, score, %{}}
+        score when is_list(score) -> 
+          # Handle multi-objective returns by taking the sum (simple aggregation)
+          aggregated_score = Enum.sum(score)
+          {:ok, aggregated_score, %{objectives: score}}
         {:pruned, score} -> {:pruned, score}
         {:error, reason} -> {:error, reason}
         other -> {:error, {:invalid_objective_return, other}}
