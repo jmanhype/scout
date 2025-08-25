@@ -1,0 +1,82 @@
+site_name: Scout - Hyperparameter Optimization Framework
+site_description: A powerful DSPy-based hyperparameter optimization library
+site_author: Scout Team
+site_url: https://YOUR_GITHUB_USERNAME.github.io/scout/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - toc.integration.navigation
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Examples: getting-started/examples.md
+  - Concepts:
+    - DSPy Integration: concepts/dspy-integration.md
+    - Hyperparameter Optimization: concepts/hyperparameter-optimization.md
+    - Study Management: concepts/study-management.md
+  - API Reference:
+    - Scout Class: api/scout.md
+    - Study Class: api/study.md
+    - Utils: api/utils.md
+  - Apollo MCP Integration:
+    - Overview: apollo-mcp/overview.md
+    - Setup: apollo-mcp/setup.md
+    - Dagger Functions: apollo-mcp/dagger-functions.md
+  - Contributing:
+    - Development: contributing/development.md
+    - Testing: contributing/testing.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/YOUR_USERNAME/scout
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/scout/
