@@ -31,7 +31,7 @@ defmodule ScoutDashboard.MixProject do
   defp deps do
     [
       # Depend on scout_core
-      {:scout, in_umbrella: true},
+      {:scout_core, in_umbrella: true},
       
       # Phoenix stack
       {:phoenix, "~> 1.7.7"},

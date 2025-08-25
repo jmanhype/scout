@@ -6,7 +6,7 @@ defmodule Scout.Application do
   def start(_type, _args) do
     # Database components (only if PostgreSQL adapter is configured)
     repo_children = 
-      if Application.get_env(:scout, :store_adapter) == Scout.Store.Postgres do
+      if Application.get_env(:scout_core, :store_adapter) == Scout.Store.Postgres do
         [Scout.Repo]
       else
         []
@@ -17,23 +17,8 @@ defmodule Scout.Application do
       {Scout.Store, []},
       {Task.Supervisor, name: Scout.TaskSupervisor}
     ]
-    
-    # Dashboard components only if enabled in config
-    dashboard_children = 
-      if Application.get_env(:scout, :dashboard_enabled, true) do
-        [
-          # Phoenix PubSub for dashboard
-          {Phoenix.PubSub, name: ScoutDashboard.PubSub},
-          # Dashboard telemetry listener
-          ScoutDashboard.TelemetryListener,
-          # Phoenix endpoint
-          ScoutDashboardWeb.Endpoint
-        ]
-      else
-        []
-      end
 
-    children = repo_children ++ base_children ++ dashboard_children
+    children = repo_children ++ base_children
     
     Supervisor.start_link(children, strategy: :one_for_one, name: Scout.Supervisor)
   end
