@@ -12,5 +12,5 @@ config :scout, Oban,
   queues: [scout_trials: 50],
   plugins: [Oban.Plugins.Pruner]
 
-# Store adapter
-config :scout, :store, Scout.Store.Ecto
+# Store adapter (Scout.Store.ETS or Scout.Store.Postgres)
+config :scout, :store_adapter, Scout.Store.Postgres
