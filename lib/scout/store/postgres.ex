@@ -89,7 +89,13 @@ defmodule Scout.Store.Postgres do
   
   @impl true
   def fetch_trial(study_id, trial_id) do
-    get_trial(study_id, trial_id)
+    query = from t in Trial,
+      where: t.study_id == ^study_id and t.id == ^trial_id
+    
+    case Repo.one(query) do
+      nil -> :error
+      trial -> {:ok, trial_to_map(trial)}
+    end
   end
   
   @impl true 
@@ -103,37 +109,6 @@ defmodule Scout.Store.Postgres do
     |> Enum.map(&trial_to_map/1)
   end
 
-  @impl true
-  def put_trial(study_id, trial_map) do
-    trial_map = Map.put(trial_map, :study_id, study_id)
-    changeset = Trial.changeset(%Trial{}, trial_map)
-    
-    # FIXED: Use explicit column updates instead of :replace_all to prevent data loss
-    case Repo.insert(changeset,
-                     on_conflict: [set: [params: changeset.changes[:params],
-                                        value: changeset.changes[:value], 
-                                        status: changeset.changes[:status],
-                                        metadata: changeset.changes[:metadata],
-                                        started_at: changeset.changes[:started_at],
-                                        completed_at: changeset.changes[:completed_at],
-                                        updated_at: {:placeholder, :now}]],
-                     conflict_target: [:study_id, :id],
-                     placeholders: %{now: DateTime.utc_now()}) do
-      {:ok, _trial} -> :ok
-      {:error, changeset} -> {:error, changeset}
-    end
-  end
-  
-  @impl true
-  def get_trial(study_id, trial_id) do
-    query = from t in Trial,
-      where: t.study_id == ^study_id and t.id == ^trial_id
-    
-    case Repo.one(query) do
-      nil -> {:error, :not_found}
-      trial -> {:ok, trial_to_map(trial)}
-    end
-  end
   
   
   @impl true

@@ -73,7 +73,7 @@ defmodule Scout.Util.RNG do
       result
     after
       # Always restore original state, even if function crashes
-      :rand.import_seed(old_state)
+      _ = :rand.seed(old_state)
     end
   end
 
@@ -161,7 +161,7 @@ defmodule Scout.Util.RNG do
       :rand.seed(:exsss, seed)
       fun.()
     after
-      :rand.import_seed(old_state)
+      _ = :rand.seed(old_state)
     end
   end
 end

@@ -42,31 +42,31 @@ defmodule Scout.Sampler.TPEFixed do
   ## Behaviour implementation
 
   @impl Scout.Sampler
-  def init(study_id, opts \\ []) when is_binary(study_id) do
-    gamma = Keyword.get(opts, :gamma, @gamma_default)
-    n_startup = Keyword.get(opts, :n_startup, @n_startup)
+  def init(opts) when is_map(opts) do
+    gamma = Map.get(opts, :gamma, @gamma_default)
+    n_startup = Map.get(opts, :n_startup, @n_startup)
+    study_id = Map.get(opts, :study_id, "")
     
     # Initialize with deterministic seed for reproducibility
-    state = %__MODULE__{
+    %__MODULE__{
       gamma: gamma,
       n_startup: n_startup,
       study_id: study_id,
       rng_state: nil
     }
-    
-    Logger.info("TPE sampler initialized: gamma=#{gamma}, n_startup=#{n_startup}")
-    {:ok, state}
   end
 
   @impl Scout.Sampler  
-  def sample(state, search_space, completed_trials) do
+  def next(search_space, trial_index, history, state) do
+    # Adapter to internal sample function
+    completed_trials = history
     trial_count = length(completed_trials)
     
     # Use random sampling for startup phase
     if trial_count < state.n_startup do
-      sample_random(state, search_space, trial_count)
+      sample_random(state, search_space, trial_index)
     else
-      sample_tpe(state, search_space, completed_trials, trial_count)
+      sample_tpe(state, search_space, completed_trials, trial_index)
     end
   end
 

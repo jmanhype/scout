@@ -6,7 +6,7 @@ defmodule Scout.Executor.Iterative do
   
   @behaviour Scout.Executor
   
-  alias Scout.{Store, Trial, Telemetry}
+  alias Scout.{Trial, Telemetry}
   
   # Use ETS store by default
   @store_impl Application.compile_env(:scout, :store, Scout.Store)
@@ -16,7 +16,7 @@ defmodule Scout.Executor.Iterative do
     # Don't pollute global RNG state - seed will be set per-trial
     :ok = @store_impl.put_study(%{id: study.id, goal: study.goal})
 
-    Telemetry.study_event(:start, %{trials: study.max_trials}, %{study: study.id, executor: :iterative})
+    Telemetry.study_created(study.id, study.goal, %{executor: :iterative, max_trials: study.max_trials})
 
     sampler = (study.sampler || Scout.Sampler.RandomSearch)
     s_state = sampler.init(Map.merge(study.sampler_opts || %{}, %{goal: study.goal}))
@@ -35,7 +35,8 @@ defmodule Scout.Executor.Iterative do
 
     results = Enum.map(tasks, &Task.await(&1, :infinity))
     best = pick_best(results, study.goal)
-    Telemetry.study_event(:stop, %{completed: length(results)}, %{study: study.id, best: best})
+    best_score = if best, do: best.score, else: 0.0
+    Telemetry.study_completed(study.id, %{duration_ms: 0, trial_count: length(results), best_score: best_score}, %{best_trial_id: if(best, do: best.id, else: nil)})
     {:ok, %{best_params: best && best.params, best_score: best && best.score, trials: results}}
   end
 
@@ -49,7 +50,7 @@ defmodule Scout.Executor.Iterative do
     id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
     t = %Trial{id: id, study_id: study.id, params: params, bracket: bracket, status: :running, started_at: now()}
     {:ok, _} = @store_impl.add_trial(study.id, t)
-    Telemetry.trial_event(:start, %{ix: ix}, %{study: study.id, trial_id: id, bracket: bracket, params: params})
+    Telemetry.trial_started(study.id, id, ix, params, %{bracket: bracket})
 
     ctx = %{study_id: study.id, goal: study.goal, bracket: bracket}
     report_fun = fn score, rung ->
@@ -58,7 +59,7 @@ defmodule Scout.Executor.Iterative do
         {keep, _} = pruner_mod.keep?(id, [score], rung, ctx, p_state2)
         if keep, do: :continue, else: (
           @store_impl.update_trial(study.id, id, %{status: :pruned});
-          Telemetry.trial_event(:prune, %{rung: rung, score: score}, %{study: study.id, trial_id: id, bracket: bracket});
+          Telemetry.trial_pruned(study.id, id, rung, score, bracket, "below_percentile");
           :prune
         )
       else
@@ -79,14 +80,16 @@ defmodule Scout.Executor.Iterative do
     case result do
       {:ok, score, m} ->
         _ = @store_impl.update_trial(study.id, id, %{status: :succeeded, score: score, metrics: m, finished_at: now()})
-        Telemetry.trial_event(:stop, %{score: score}, %{study: study.id, trial_id: id})
+        dur = (now() - t.started_at) * 1000
+        Telemetry.trial_completed(study.id, id, score, dur, :completed)
         %{t | status: :succeeded, score: score, metrics: m, finished_at: now()}
       {:pruned, score} ->
         _ = @store_impl.update_trial(study.id, id, %{status: :pruned, score: score, finished_at: now()})
         %{t | status: :pruned, score: score, finished_at: now()}
       {:error, reason} ->
         _ = @store_impl.update_trial(study.id, id, %{status: :failed, error: inspect(reason), finished_at: now()})
-        Telemetry.trial_event(:error, %{}, %{study: study.id, trial_id: id, reason: inspect(reason)})
+        dur = (now() - t.started_at) * 1000
+        Telemetry.trial_completed(study.id, id, 0.0, dur, :failed, %{error: inspect(reason)})
         %{t | status: :failed, error: inspect(reason), finished_at: now()}
     end
   end

@@ -10,7 +10,7 @@ defmodule Scout.Executor.Local do
   def run(study) do
     base_seed = study.seed || :erlang.unique_integer([:positive])
     :ok = Store.put_study(Map.merge(Map.take(study, [:id, :goal, :max_trials, :parallelism]), %{seed: base_seed}))
-    Telemetry.study_event(:start, %{}, %{study: study.id, executor: :local})
+    Telemetry.study_created(study.id, study.goal, %{executor: :local})
 
     sampler_mod = (study.sampler || Scout.Sampler.RandomSearch)
     sampler_state = sampler_mod.init(Map.merge(study.sampler_opts || %{}, %{goal: study.goal}))
@@ -22,7 +22,8 @@ defmodule Scout.Executor.Local do
       |> Enum.map(fn {:ok, t} -> t end)
 
     best = pick_best(trials, study.goal)
-    Telemetry.study_event(:stop, %{n: length(trials)}, %{study: study.id, best: best})
+    best_score = if best, do: best.score, else: 0.0
+    Telemetry.study_completed(study.id, %{duration_ms: 0, trial_count: length(trials), best_score: best_score}, %{best_trial_id: if(best, do: best.id, else: nil)})
     best_to_result(best)
   end
 
@@ -36,7 +37,7 @@ defmodule Scout.Executor.Local do
     {:exsss, {a, _, _}} = Seed.seed_for(study.id, ix, base_seed)
     t = %Trial{id: id, study_id: study.id, params: params, bracket: 0, status: :running, started_at: now(), seed: a}
     {:ok, _} = Scout.Store.add_trial(study.id, t)
-    Telemetry.trial_event(:start, %{ix: ix}, %{study: study.id, trial_id: id, params: params})
+    Telemetry.trial_started(study.id, id, ix, params)
 
     result =
       case safe_objective(study.objective, params) do
@@ -51,11 +52,13 @@ defmodule Scout.Executor.Local do
       case result do
         {:ok, score, metrics} ->
           _ = Scout.Store.update_trial(study.id, id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()})
-          Telemetry.trial_event(:stop, %{score: score}, %{study: study.id, trial_id: id})
+          dur = now() - t.started_at
+          Telemetry.trial_completed(study.id, id, score, dur * 1000, :completed)
           %Trial{t | status: :succeeded, score: score, metrics: metrics, finished_at: now()}
         {:error, reason} ->
           _ = Scout.Store.update_trial(study.id, id, %{status: :failed, error: inspect(reason), finished_at: now()})
-          Telemetry.trial_event(:error, %{}, %{study: study.id, trial_id: id, reason: inspect(reason)})
+          dur = now() - t.started_at
+          Telemetry.trial_completed(study.id, id, 0.0, dur * 1000, :failed, %{error: inspect(reason)})
           %Trial{t | status: :failed, error: inspect(reason), finished_at: now()}
       end
     t2

@@ -15,7 +15,7 @@ defmodule Scout.Executor.Oban do
   @impl Scout.Executor
   def run(%{id: id} = study) do
     :ok = Store.put_study(study)
-    Telemetry.study_event(:start, %{}, %{study: id, executor: :oban})
+    Telemetry.study_created(id, study.goal, %{executor: :oban})
     for ix <- 0..(study.max_trials - 1) do
       args = %{
         "study_id" => id,
@@ -65,7 +65,7 @@ defmodule Scout.Executor.Oban.TrialWorker do
     id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
     t = %Trial{id: id, study_id: study_id, params: params, bracket: 0, status: :running, started_at: now(), seed: elem(Seed.seed_for(study_id, ix, base_seed), 1)}
     {:ok, _} = Store.add_trial(study_id, t)
-    Telemetry.trial_event(:start, %{ix: ix}, %{study: study_id, trial_id: id, params: params})
+    Telemetry.trial_started(study_id, id, ix, params)
 
     goal = safe_goal_atom(args["goal"] || "maximize")
 
@@ -80,17 +80,17 @@ defmodule Scout.Executor.Oban.TrialWorker do
         # FIXED: Handle store write errors - don't ignore return values
         case Store.update_trial(study_id, id, %{status: :succeeded, score: score, metrics: metrics, finished_at: now()}) do
           :ok -> 
-            Telemetry.trial_event(:stop, %{score: score}, %{study: study_id, trial_id: id})
+            Telemetry.trial_completed(study_id, id, score, 0, :completed)
           {:error, reason} ->
-            Telemetry.trial_event(:error, %{}, %{study: study_id, trial_id: id, reason: "store_update_failed: #{inspect(reason)}"})
+            Telemetry.trial_completed(study_id, id, 0.0, 0, :failed, %{error: "store_update_failed: #{inspect(reason)}"})
         end
       {:error, reason} ->
         case Store.update_trial(study_id, id, %{status: :failed, error: inspect(reason), finished_at: now()}) do
           :ok -> :ok
           {:error, store_error} ->
-            Telemetry.trial_event(:error, %{}, %{study: study_id, trial_id: id, reason: "store_update_failed: #{inspect(store_error)}"})
+            Telemetry.error_occurred(:oban_executor, :store_error, "store_update_failed: #{inspect(store_error)}", %{study_id: study_id, trial_id: id})
         end
-        Telemetry.trial_event(:error, %{}, %{study: study_id, trial_id: id, reason: inspect(reason)})
+        Telemetry.trial_completed(study_id, id, 0.0, 0, :failed, %{error: inspect(reason)})
     end
 
     :ok
@@ -111,7 +111,7 @@ defmodule Scout.Executor.Oban.TrialWorker do
       _ = Store.record_observation(study_id, trial_id, 0, rung, score)
       if pruner_mod do
         {keep, _} = pruner_mod.keep?(trial_id, [score], rung, %{goal: goal, study_id: study_id}, pruner_state)
-        if keep, do: :continue, else: (Scout.Telemetry.trial_event(:prune, %{rung: rung, score: score}, %{study: study_id, trial_id: trial_id}); :prune)
+        if keep, do: :continue, else: (Scout.Telemetry.trial_pruned(study_id, trial_id, rung, score, 0, "below_percentile"); :prune)
       else
         :continue
       end
