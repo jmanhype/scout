@@ -27,12 +27,14 @@ defmodule Scout.Executor.Local do
   end
 
   defp run_one(study, ix, base_seed, sampler_mod, sampler_state) do
-    :rand.seed(Seed.seed_for(study.id, ix, base_seed))
+    {:exsss, seed_tuple} = Seed.seed_for(study.id, ix, base_seed)
+    :rand.seed(:exsss, seed_tuple)
     history = Scout.Store.list_trials(study.id)
     {params, _state2} = sampler_mod.next(study.search_space, ix, history, sampler_state)
 
     id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    t = %Trial{id: id, study_id: study.id, params: params, bracket: 0, status: :running, started_at: now(), seed: elem(Seed.seed_for(study.id, ix, base_seed), 1)}
+    {:exsss, {a, _, _}} = Seed.seed_for(study.id, ix, base_seed)
+    t = %Trial{id: id, study_id: study.id, params: params, bracket: 0, status: :running, started_at: now(), seed: a}
     {:ok, _} = Scout.Store.add_trial(study.id, t)
     Telemetry.trial_event(:start, %{ix: ix}, %{study: study.id, trial_id: id, params: params})
 

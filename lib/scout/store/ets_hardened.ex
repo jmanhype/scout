@@ -74,14 +74,15 @@ defmodule Scout.Store.ETSHardened do
   end
 
   @impl Scout.Store.Adapter
-  def update_trial(trial_id, updates) when is_binary(trial_id) and is_map(updates) do
-    GenServer.call(__MODULE__, {:update_trial, trial_id, updates})
+  def update_trial(study_id, trial_id, updates) 
+      when is_binary(study_id) and is_binary(trial_id) and is_map(updates) do
+    GenServer.call(__MODULE__, {:update_trial, study_id, trial_id, updates})
   end
 
   @impl Scout.Store.Adapter
-  def record_observation(trial_id, bracket, rung, score) 
-      when is_binary(trial_id) and is_integer(bracket) and is_integer(rung) and is_number(score) do
-    GenServer.call(__MODULE__, {:record_observation, trial_id, bracket, rung, score})
+  def record_observation(study_id, trial_id, bracket, rung, score) 
+      when is_binary(study_id) and is_binary(trial_id) and is_integer(bracket) and is_integer(rung) and is_number(score) do
+    GenServer.call(__MODULE__, {:record_observation, study_id, trial_id, bracket, rung, score})
   end
 
   @impl Scout.Store.Adapter
@@ -125,7 +126,7 @@ defmodule Scout.Store.ETSHardened do
   end
 
   @impl Scout.Store.Adapter
-  def fetch_trial(trial_id) when is_binary(trial_id) do
+  def fetch_trial(study_id, trial_id) when is_binary(study_id) and is_binary(trial_id) do
     case :ets.lookup(@tbl_trials, trial_id) do
       [{^trial_id, study_id, index, status, payload}] ->
         {:ok, %{
