@@ -49,6 +49,22 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Examples: getting-started/examples.md
+  - Concepts:
+    - DSPy Integration: concepts/dspy-integration.md
+    - Hyperparameter Optimization: concepts/hyperparameter-optimization.md
+    - Study Management: concepts/study-management.md
+  - API Reference:
+    - Scout API: api/scout.md
+  - Apollo MCP:
+    - Overview: apollo-mcp/overview.md
+  - Guides:
+    - Optuna Parity: docs/OPTUNA_PARITY_REPORT.md
+    - Migration Guide: docs/MIGRATION_GUIDE.md
+    - Getting Started: docs/GETTING_STARTED.md
 
 extra:
   social:
