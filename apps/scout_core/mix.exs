@@ -13,7 +13,15 @@ defmodule ScoutCore.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+
+      # Hex package metadata
+      description: description(),
+      package: package(),
+      name: "Scout",
+      source_url: "https://github.com/your-org/scout",
+      homepage_url: "https://github.com/your-org/scout",
+      docs: docs()
     ]
   end
 
@@ -51,6 +59,36 @@ defmodule ScoutCore.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+    ]
+  end
+
+  defp description do
+    """
+    Production-ready hyperparameter optimization for Elixir with >99% Optuna feature parity.
+    Leverages BEAM's fault tolerance, real-time dashboards, and native distributed computing
+    for ML and LLM model tuning.
+    """
+  end
+
+  defp package do
+    [
+      name: "scout",
+      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/your-org/scout",
+        "Docs" => "https://hexdocs.pm/scout"
+      },
+      maintainers: ["Scout Contributors"]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Scout",
+      extras: ["README.md", "LICENSE"],
+      source_ref: "v0.3.0",
+      formatters: ["html"]
     ]
   end
 end
