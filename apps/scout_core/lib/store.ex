@@ -13,14 +13,14 @@ defmodule Scout.Store do
   ## Configuration
   
       # Runtime configuration (preferred - not compile-time locked)
-      config :scout, :store_adapter, Scout.Store.Postgres
+      config :scout_core, :store_adapter, Scout.Store.Postgres
   """
 
   alias Scout.Store.Adapter
 
   # Runtime adapter configuration (prevents compile-time lock-in)
   defp adapter do
-    Application.get_env(:scout, :store_adapter, Scout.Store.ETS)
+    Application.get_env(:scout_core, :store_adapter, Scout.Store.ETS)
   end
 
   @doc """

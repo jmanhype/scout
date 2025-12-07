@@ -6,7 +6,7 @@ defmodule Scout.Format do
   Uses JSON schemas to validate payloads in dev/test.
   """
   
-  @app :scout
+  @app :scout_core
 
   # Lazy load schemas at runtime (not compile time) for resilience
   defp load_schema(name) do

@@ -14,15 +14,15 @@ defmodule Scout.SecurityGates do
   end
 
   defp check_dashboard_security! do
-    if Application.get_env(:scout_dashboard, :enabled, false) do
-      secret = Application.get_env(:scout_dashboard, :secret)
+    if Application.get_env(:scout_core_dashboard, :enabled, false) do
+      secret = Application.get_env(:scout_core_dashboard, :secret)
       if is_nil(secret) or String.length(secret) < 32 do
         raise """
         SECURITY GATE FAILURE: Dashboard enabled without proper authentication.
         
         Either:
-        1. Disable dashboard: config :scout_dashboard, enabled: false
-        2. Set strong secret: config :scout_dashboard, secret: "your-32-char-secret"
+        1. Disable dashboard: config :scout_core_dashboard, enabled: false
+        2. Set strong secret: config :scout_core_dashboard, secret: "your-32-char-secret"
         
         Current secret length: #{if secret, do: String.length(secret), else: 0}
         """
@@ -37,7 +37,7 @@ defmodule Scout.SecurityGates do
       case :ets.info(table, :protection) do
         :public ->
           case :ets.info(table, :name) do
-            name when name in [:scout_trials, :scout_observations, :scout_studies] ->
+            name when name in [:scout_core_trials, :scout_core_observations, :scout_core_studies] ->
               raise """
               SECURITY GATE FAILURE: Scout ETS table #{name} is :public.
               This allows arbitrary external writes and data corruption.

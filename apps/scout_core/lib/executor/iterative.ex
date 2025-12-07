@@ -9,7 +9,7 @@ defmodule Scout.Executor.Iterative do
   alias Scout.Telemetry
   
   # Use ETS store by default
-  @store_impl Application.compile_env(:scout, :store, Scout.Store)
+  @store_impl Application.compile_env(:scout_core, :store, Scout.Store)
 
   @impl Scout.Executor
   def run(study) do

@@ -29,14 +29,14 @@ defmodule Scout.Executor.Oban do
         "pruner_opts" => study.pruner_opts || %{},
         "parallelism" => study.parallelism
       }
-      Oban.insert!(Scout.Executor.Oban.TrialWorker.new(args, queue: :scout_trials))
+      Oban.insert!(Scout.Executor.Oban.TrialWorker.new(args, queue: :scout_core_trials))
     end
     {:ok, %{best_params: %{}, best_score: :nan}}
   end
 end
 
 defmodule Scout.Executor.Oban.TrialWorker do
-  use Oban.Worker, queue: :scout_trials, max_attempts: 3
+  use Oban.Worker, queue: :scout_core_trials, max_attempts: 3
   alias Scout.{Store, Telemetry, Util.Seed}
 
   @impl true

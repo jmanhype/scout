@@ -8,7 +8,7 @@ defmodule Scout.Telemetry do
   
   ## Event Naming Convention
   
-  All events follow the pattern: `[:scout, component, action]`
+  All events follow the pattern: `[:scout_core, component, action]`
   
   ## Measurement Units
   
@@ -35,7 +35,7 @@ defmodule Scout.Telemetry do
   @doc """
   Study created event.
   
-  Event: `[:scout, :study, :created]`
+  Event: `[:scout_core, :study, :created]`
   
   Measurements:
   - `:timestamp` - Creation time (ms)
@@ -49,7 +49,7 @@ defmodule Scout.Telemetry do
   """
   def study_created(study_id, goal, opts \\ %{}) do
     :telemetry.execute(
-      [:scout, :study, :created],
+      [:scout_core, :study, :created],
       %{timestamp: System.system_time(:millisecond)},
       Map.merge(%{
         study_id: study_id,
@@ -62,7 +62,7 @@ defmodule Scout.Telemetry do
   @doc """
   Study status changed event.
   
-  Event: `[:scout, :study, :status_changed]`
+  Event: `[:scout_core, :study, :status_changed]`
   
   Measurements:
   - `:timestamp` - Change time (ms)
@@ -75,7 +75,7 @@ defmodule Scout.Telemetry do
   """
   def study_status_changed(study_id, from_status, to_status, reason \\ nil) do
     :telemetry.execute(
-      [:scout, :study, :status_changed],
+      [:scout_core, :study, :status_changed],
       %{timestamp: System.system_time(:millisecond)},
       %{
         study_id: study_id,
@@ -90,7 +90,7 @@ defmodule Scout.Telemetry do
   @doc """
   Study completed event.
   
-  Event: `[:scout, :study, :completed]`
+  Event: `[:scout_core, :study, :completed]`
   
   Measurements:
   - `:duration_ms` - Total study duration
@@ -105,7 +105,7 @@ defmodule Scout.Telemetry do
   """
   def study_completed(study_id, measurements, metadata) do
     :telemetry.execute(
-      [:scout, :study, :completed],
+      [:scout_core, :study, :completed],
       Map.merge(%{timestamp: System.system_time(:millisecond)}, measurements),
       Map.merge(%{
         study_id: study_id,
@@ -121,7 +121,7 @@ defmodule Scout.Telemetry do
   @doc """
   Trial started event.
   
-  Event: `[:scout, :trial, :started]`
+  Event: `[:scout_core, :trial, :started]`
   
   Measurements:
   - `:trial_index` - 0-based trial number
@@ -136,7 +136,7 @@ defmodule Scout.Telemetry do
   """
   def trial_started(study_id, trial_id, trial_index, params, opts \\ %{}) do
     :telemetry.execute(
-      [:scout, :trial, :started],
+      [:scout_core, :trial, :started],
       %{
         trial_index: trial_index,
         timestamp: System.system_time(:millisecond)
@@ -153,7 +153,7 @@ defmodule Scout.Telemetry do
   @doc """
   Trial completed event.
   
-  Event: `[:scout, :trial, :completed]`
+  Event: `[:scout_core, :trial, :completed]`
   
   Measurements:
   - `:score` - Objective value
@@ -168,7 +168,7 @@ defmodule Scout.Telemetry do
   """
   def trial_completed(study_id, trial_id, score, duration_us, status, opts \\ %{}) do
     :telemetry.execute(
-      [:scout, :trial, :completed],
+      [:scout_core, :trial, :completed],
       %{
         score: score,
         duration_us: duration_us,
@@ -186,7 +186,7 @@ defmodule Scout.Telemetry do
   @doc """
   Trial pruned event.
   
-  Event: `[:scout, :trial, :pruned]`
+  Event: `[:scout_core, :trial, :pruned]`
   
   Measurements:
   - `:rung` - Checkpoint where pruned
@@ -200,7 +200,7 @@ defmodule Scout.Telemetry do
   """
   def trial_pruned(study_id, trial_id, rung, score, bracket, reason) do
     :telemetry.execute(
-      [:scout, :trial, :pruned],
+      [:scout_core, :trial, :pruned],
       %{
         rung: rung,
         score: score,
@@ -223,7 +223,7 @@ defmodule Scout.Telemetry do
   @doc """
   Sampler suggestion event.
   
-  Event: `[:scout, :sampler, :suggested]`
+  Event: `[:scout_core, :sampler, :suggested]`
   
   Measurements:
   - `:trial_index` - Current trial number
@@ -237,7 +237,7 @@ defmodule Scout.Telemetry do
   """
   def sampler_suggested(study_id, sampler, trial_index, params, history_size, duration_us) do
     :telemetry.execute(
-      [:scout, :sampler, :suggested],
+      [:scout_core, :sampler, :suggested],
       %{
         trial_index: trial_index,
         history_size: history_size,
@@ -260,7 +260,7 @@ defmodule Scout.Telemetry do
   @doc """
   Pruner decision event.
   
-  Event: `[:scout, :pruner, :decision]`
+  Event: `[:scout_core, :pruner, :decision]`
   
   Measurements:
   - `:rung` - Current checkpoint
@@ -275,7 +275,7 @@ defmodule Scout.Telemetry do
   """
   def pruner_decision(study_id, trial_id, pruner, rung, decision, opts \\ %{}) do
     :telemetry.execute(
-      [:scout, :pruner, :decision],
+      [:scout_core, :pruner, :decision],
       %{
         rung: rung,
         percentile: opts[:percentile] || 0.0,
@@ -298,7 +298,7 @@ defmodule Scout.Telemetry do
   @doc """
   Executor batch started event.
   
-  Event: `[:scout, :executor, :batch_started]`
+  Event: `[:scout_core, :executor, :batch_started]`
   
   Measurements:
   - `:batch_size` - Number of trials in batch
@@ -311,7 +311,7 @@ defmodule Scout.Telemetry do
   """
   def executor_batch_started(study_id, executor, batch_size, parallel \\ false) do
     :telemetry.execute(
-      [:scout, :executor, :batch_started],
+      [:scout_core, :executor, :batch_started],
       %{
         batch_size: batch_size,
         timestamp: System.system_time(:millisecond)
@@ -328,7 +328,7 @@ defmodule Scout.Telemetry do
   @doc """
   Executor batch completed event.
   
-  Event: `[:scout, :executor, :batch_completed]`
+  Event: `[:scout_core, :executor, :batch_completed]`
   
   Measurements:
   - `:batch_size` - Number of trials completed
@@ -342,7 +342,7 @@ defmodule Scout.Telemetry do
   """
   def executor_batch_completed(study_id, executor, measurements) do
     :telemetry.execute(
-      [:scout, :executor, :batch_completed],
+      [:scout_core, :executor, :batch_completed],
       Map.merge(%{timestamp: System.system_time(:millisecond)}, measurements),
       %{
         study_id: study_id,
@@ -359,7 +359,7 @@ defmodule Scout.Telemetry do
   @doc """
   Storage operation event.
   
-  Event: `[:scout, :store, :operation]`
+  Event: `[:scout_core, :store, :operation]`
   
   Measurements:
   - `:duration_us` - Operation duration
@@ -373,7 +373,7 @@ defmodule Scout.Telemetry do
   """
   def storage_operation(adapter, operation, duration_us, success, metadata \\ %{}) do
     :telemetry.execute(
-      [:scout, :store, :operation],
+      [:scout_core, :store, :operation],
       %{
         duration_us: duration_us,
         timestamp: System.system_time(:millisecond)
@@ -394,7 +394,7 @@ defmodule Scout.Telemetry do
   @doc """
   Error occurred event.
   
-  Event: `[:scout, :error, :occurred]`
+  Event: `[:scout_core, :error, :occurred]`
   
   Measurements:
   - `:timestamp` - Error time (ms)
@@ -408,7 +408,7 @@ defmodule Scout.Telemetry do
   """
   def error_occurred(component, error_type, message, metadata \\ %{}) do
     :telemetry.execute(
-      [:scout, :error, :occurred],
+      [:scout_core, :error, :occurred],
       %{timestamp: System.system_time(:millisecond)},
       Map.merge(%{
         component: component,
@@ -430,7 +430,7 @@ defmodule Scout.Telemetry do
   
       Scout.Telemetry.attach_handler(
         "my-logger",
-        [:scout, :trial, :completed],
+        [:scout_core, :trial, :completed],
         fn event, measurements, metadata, _config ->
           Logger.info("Trial completed: \#{metadata.trial_id}")
         end
@@ -448,30 +448,30 @@ defmodule Scout.Telemetry do
   def list_events do
     [
       # Study events
-      [:scout, :study, :created],
-      [:scout, :study, :status_changed],
-      [:scout, :study, :completed],
+      [:scout_core, :study, :created],
+      [:scout_core, :study, :status_changed],
+      [:scout_core, :study, :completed],
       
       # Trial events
-      [:scout, :trial, :started],
-      [:scout, :trial, :completed],
-      [:scout, :trial, :pruned],
+      [:scout_core, :trial, :started],
+      [:scout_core, :trial, :completed],
+      [:scout_core, :trial, :pruned],
       
       # Sampler events
-      [:scout, :sampler, :suggested],
+      [:scout_core, :sampler, :suggested],
       
       # Pruner events
-      [:scout, :pruner, :decision],
+      [:scout_core, :pruner, :decision],
       
       # Executor events
-      [:scout, :executor, :batch_started],
-      [:scout, :executor, :batch_completed],
+      [:scout_core, :executor, :batch_started],
+      [:scout_core, :executor, :batch_completed],
       
       # Storage events
-      [:scout, :store, :operation],
+      [:scout_core, :store, :operation],
       
       # Error events
-      [:scout, :error, :occurred]
+      [:scout_core, :error, :occurred]
     ]
   end
   
@@ -482,14 +482,14 @@ defmodule Scout.Telemetry do
   """
   def event_spec(event_name) do
     case event_name do
-      [:scout, :study, :created] ->
+      [:scout_core, :study, :created] ->
         %{
           measurements: [:timestamp],
           metadata: [:study_id, :goal, :max_trials, :sampler, :pruner],
           required: [:study_id, :goal]
         }
         
-      [:scout, :trial, :completed] ->
+      [:scout_core, :trial, :completed] ->
         %{
           measurements: [:score, :duration_us, :timestamp],
           metadata: [:study_id, :trial_id, :status, :error, :metrics],

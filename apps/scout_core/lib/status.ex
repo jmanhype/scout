@@ -5,7 +5,7 @@ defmodule Scout.Status do
   alias Scout.Store
   
   # Use ETS store by default
-  @store_impl Application.compile_env(:scout, :store, Scout.Store)
+  @store_impl Application.compile_env(:scout_core, :store, Scout.Store)
 
   def status(study_id) do
     with {:ok, _} <- @store_impl.get_study(study_id) do

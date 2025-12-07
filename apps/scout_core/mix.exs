@@ -3,7 +3,7 @@ defmodule ScoutCore.MixProject do
 
   def project do
     [
-      app: :scout,  # Changed from :scout_core to match package name
+      app: :scout_core,  # Directory name must match in umbrella
       version: "0.3.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -14,6 +14,16 @@ defmodule ScoutCore.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+
+      # Test coverage
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ],
 
       # Hex publishing
       description: description(),
@@ -76,6 +86,7 @@ defmodule ScoutCore.MixProject do
       
       # Dev/Test
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.18", only: :test, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false}
     ]

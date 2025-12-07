@@ -9,9 +9,9 @@ defmodule Scout.Store.ETSHardened do
   - Proper error handling with structured returns
   
   Tables:
-  - :scout_studies -> {study_id, study_map}
-  - :scout_trials -> {trial_id, study_id, trial_index, status, payload}
-  - :scout_observations -> {trial_id, bracket, rung, score}
+  - :scout_core_studies -> {study_id, study_map}
+  - :scout_core_trials -> {trial_id, study_id, trial_index, status, payload}
+  - :scout_core_observations -> {trial_id, bracket, rung, score}
   """
 
   @behaviour Scout.Store.Adapter
@@ -21,9 +21,9 @@ defmodule Scout.Store.ETSHardened do
 
   alias Scout.Util.SafeAtoms
 
-  @tbl_studies :scout_studies
-  @tbl_trials :scout_trials  
-  @tbl_observations :scout_observations
+  @tbl_studies :scout_core_studies
+  @tbl_trials :scout_core_trials  
+  @tbl_observations :scout_core_observations
 
   ## Client API
 

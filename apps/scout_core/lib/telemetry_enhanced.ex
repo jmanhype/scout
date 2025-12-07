@@ -9,59 +9,59 @@ defmodule Scout.TelemetryEnhanced do
   - Error context preservation
   - Performance measurement integration
   
-  Events follow the pattern: [:scout, :component, :action, :result]
+  Events follow the pattern: [:scout_core, :component, :action, :result]
   """
 
   require Logger
 
   # Event definitions - comprehensive coverage
   @trial_events [
-    [:scout, :trial, :start],
-    [:scout, :trial, :complete], 
-    [:scout, :trial, :error],
-    [:scout, :trial, :timeout],
-    [:scout, :trial, :prune]
+    [:scout_core, :trial, :start],
+    [:scout_core, :trial, :complete], 
+    [:scout_core, :trial, :error],
+    [:scout_core, :trial, :timeout],
+    [:scout_core, :trial, :prune]
   ]
 
   @study_events [
-    [:scout, :study, :start],
-    [:scout, :study, :complete],
-    [:scout, :study, :pause],
-    [:scout, :study, :resume],
-    [:scout, :study, :error]
+    [:scout_core, :study, :start],
+    [:scout_core, :study, :complete],
+    [:scout_core, :study, :pause],
+    [:scout_core, :study, :resume],
+    [:scout_core, :study, :error]
   ]
 
   @sampler_events [
-    [:scout, :sampler, :sample],
-    [:scout, :sampler, :error],
-    [:scout, :sampler, :fallback]
+    [:scout_core, :sampler, :sample],
+    [:scout_core, :sampler, :error],
+    [:scout_core, :sampler, :fallback]
   ]
 
   @store_events [
-    [:scout, :store, :read],
-    [:scout, :store, :write],
-    [:scout, :store, :error],
-    [:scout, :store, :health_check]
+    [:scout_core, :store, :read],
+    [:scout_core, :store, :write],
+    [:scout_core, :store, :error],
+    [:scout_core, :store, :health_check]
   ]
 
   @executor_events [
-    [:scout, :executor, :dispatch],
-    [:scout, :executor, :complete],
-    [:scout, :executor, :error],
-    [:scout, :executor, :timeout]
+    [:scout_core, :executor, :dispatch],
+    [:scout_core, :executor, :complete],
+    [:scout_core, :executor, :error],
+    [:scout_core, :executor, :timeout]
   ]
 
   ## Enhanced Trial Events
 
   @doc "Trial execution started"
   def trial_start(measurements \\ %{}, metadata) do
-    emit_event([:scout, :trial, :start], 
+    emit_event([:scout_core, :trial, :start], 
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Trial completed successfully"  
   def trial_complete(measurements \\ %{}, metadata) do
-    emit_event([:scout, :trial, :complete],
+    emit_event([:scout_core, :trial, :complete],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -70,20 +70,20 @@ defmodule Scout.TelemetryEnhanced do
     enhanced_metadata = enhance_error_metadata(metadata)
     Logger.error("Trial error: #{format_error_context(enhanced_metadata)}")
     
-    emit_event([:scout, :trial, :error],
+    emit_event([:scout_core, :trial, :error],
       ensure_measurements(measurements, %{count: 1}), enhanced_metadata)
   end
 
   @doc "Trial timed out"
   def trial_timeout(measurements \\ %{}, metadata) do
     Scout.Log.warning("Trial timeout: #{format_context(metadata)}")
-    emit_event([:scout, :trial, :timeout],
+    emit_event([:scout_core, :trial, :timeout],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Trial was pruned early"
   def trial_prune(measurements \\ %{}, metadata) do
-    emit_event([:scout, :trial, :prune],
+    emit_event([:scout_core, :trial, :prune],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -92,28 +92,28 @@ defmodule Scout.TelemetryEnhanced do
   @doc "Study execution started"
   def study_start(measurements \\ %{}, metadata) do
     Logger.info("Study started: #{format_context(metadata)}")
-    emit_event([:scout, :study, :start],
+    emit_event([:scout_core, :study, :start],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Study completed successfully"
   def study_complete(measurements \\ %{}, metadata) do
     Logger.info("Study completed: #{format_context(metadata)}")
-    emit_event([:scout, :study, :complete],
+    emit_event([:scout_core, :study, :complete],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Study paused"
   def study_pause(measurements \\ %{}, metadata) do
     Logger.info("Study paused: #{format_context(metadata)}")
-    emit_event([:scout, :study, :pause],
+    emit_event([:scout_core, :study, :pause],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Study resumed"  
   def study_resume(measurements \\ %{}, metadata) do
     Logger.info("Study resumed: #{format_context(metadata)}")
-    emit_event([:scout, :study, :resume],
+    emit_event([:scout_core, :study, :resume],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -122,7 +122,7 @@ defmodule Scout.TelemetryEnhanced do
     enhanced_metadata = enhance_error_metadata(metadata)
     Logger.error("Study error: #{format_error_context(enhanced_metadata)}")
     
-    emit_event([:scout, :study, :error],
+    emit_event([:scout_core, :study, :error],
       ensure_measurements(measurements, %{count: 1}), enhanced_metadata)
   end
 
@@ -130,7 +130,7 @@ defmodule Scout.TelemetryEnhanced do
 
   @doc "Sampler generated new parameters"
   def sampler_sample(measurements \\ %{}, metadata) do
-    emit_event([:scout, :sampler, :sample],
+    emit_event([:scout_core, :sampler, :sample],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -139,14 +139,14 @@ defmodule Scout.TelemetryEnhanced do
     enhanced_metadata = enhance_error_metadata(metadata)
     Logger.error("Sampler error: #{format_error_context(enhanced_metadata)}")
     
-    emit_event([:scout, :sampler, :error],
+    emit_event([:scout_core, :sampler, :error],
       ensure_measurements(measurements, %{count: 1}), enhanced_metadata)
   end
 
   @doc "Sampler fell back to random sampling"
   def sampler_fallback(measurements \\ %{}, metadata) do
     Scout.Log.warning("Sampler fallback: #{format_context(metadata)}")
-    emit_event([:scout, :sampler, :fallback],
+    emit_event([:scout_core, :sampler, :fallback],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -154,13 +154,13 @@ defmodule Scout.TelemetryEnhanced do
 
   @doc "Store read operation with timing"
   def store_read(measurements \\ %{}, metadata) do
-    emit_event([:scout, :store, :read],
+    emit_event([:scout_core, :store, :read],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Store write operation with timing"
   def store_write(measurements \\ %{}, metadata) do
-    emit_event([:scout, :store, :write],
+    emit_event([:scout_core, :store, :write],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -169,7 +169,7 @@ defmodule Scout.TelemetryEnhanced do
     enhanced_metadata = enhance_error_metadata(metadata)
     Logger.error("Store error: #{format_error_context(enhanced_metadata)}")
     
-    emit_event([:scout, :store, :error],
+    emit_event([:scout_core, :store, :error],
       ensure_measurements(measurements, %{count: 1}), enhanced_metadata)
   end
 
@@ -181,7 +181,7 @@ defmodule Scout.TelemetryEnhanced do
     end
     
     Logger.log(level, "Store health check: #{format_context(metadata)}")
-    emit_event([:scout, :store, :health_check],
+    emit_event([:scout_core, :store, :health_check],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -189,13 +189,13 @@ defmodule Scout.TelemetryEnhanced do
 
   @doc "Executor dispatched work"
   def executor_dispatch(measurements \\ %{}, metadata) do
-    emit_event([:scout, :executor, :dispatch],
+    emit_event([:scout_core, :executor, :dispatch],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
   @doc "Executor completed work"
   def executor_complete(measurements \\ %{}, metadata) do
-    emit_event([:scout, :executor, :complete],
+    emit_event([:scout_core, :executor, :complete],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -204,14 +204,14 @@ defmodule Scout.TelemetryEnhanced do
     enhanced_metadata = enhance_error_metadata(metadata)
     Logger.error("Executor error: #{format_error_context(enhanced_metadata)}")
     
-    emit_event([:scout, :executor, :error],
+    emit_event([:scout_core, :executor, :error],
       ensure_measurements(measurements, %{count: 1}), enhanced_metadata)
   end
 
   @doc "Executor operation timeout"
   def executor_timeout(measurements \\ %{}, metadata) do
     Scout.Log.warning("Executor timeout: #{format_context(metadata)}")
-    emit_event([:scout, :executor, :timeout],
+    emit_event([:scout_core, :executor, :timeout],
       ensure_measurements(measurements, %{count: 1}), metadata)
   end
 
@@ -302,23 +302,23 @@ defmodule Scout.TelemetryEnhanced do
   end
 
   @doc "Enhanced telemetry handler with appropriate log levels"
-  def handle_event([:scout, _, _, :error] = event, _measurements, metadata, _config) do
+  def handle_event([:scout_core, _, _, :error] = event, _measurements, metadata, _config) do
     Logger.error("Scout error: #{inspect(event)} #{format_error_context(metadata)}")
   end
 
-  def handle_event([:scout, _, _, :timeout] = event, _measurements, metadata, _config) do  
+  def handle_event([:scout_core, _, _, :timeout] = event, _measurements, metadata, _config) do  
     Scout.Log.warning("Scout timeout: #{inspect(event)} #{format_context(metadata)}")
   end
 
-  def handle_event([:scout, _, _, :fallback] = event, _measurements, metadata, _config) do
+  def handle_event([:scout_core, _, _, :fallback] = event, _measurements, metadata, _config) do
     Scout.Log.warning("Scout fallback: #{inspect(event)} #{format_context(metadata)}")
   end
 
-  def handle_event([:scout, :study, :start] = event, _measurements, metadata, _config) do
+  def handle_event([:scout_core, :study, :start] = event, _measurements, metadata, _config) do
     Logger.info("Scout: #{inspect(event)} #{format_context(metadata)}")
   end
 
-  def handle_event([:scout, :study, :complete] = event, _measurements, metadata, _config) do
+  def handle_event([:scout_core, :study, :complete] = event, _measurements, metadata, _config) do
     Logger.info("Scout: #{inspect(event)} #{format_context(metadata)}")
   end
 
