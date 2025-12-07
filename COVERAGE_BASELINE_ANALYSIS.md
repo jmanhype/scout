@@ -383,9 +383,13 @@ Per `.coveralls.exs`:
 ## Next Steps
 
 1. ✅ ~~Start Postgres~~
-2. ⏳ **Run full coverage baseline** (`mix coveralls.html`) - In progress
-3. ⏸️ **Document actual coverage %** - Pending test completion
-4. ⏸️ **Start scout-9ei** (Test coverage: Scout.Easy API) - Ready to start once baseline complete
+2. ✅ ~~scout-9ei (Test coverage: Scout.Easy API)~~ - **COMPLETE**
+   - 44 test cases created (38 passing, 6 skipped for known core issues)
+   - 77.9% coverage achieved for lib/easy.ex
+   - test/easy_test.exs: 628 lines
+   - Identified 6 Scout core bugs to fix later
+3. ⏸️ **scout-7mh** (Test coverage: All Sampler modules) - Ready to start
+4. ⏸️ **scout-env** (Test coverage: Util modules) - Ready to start
 
 ---
 
