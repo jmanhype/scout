@@ -3,14 +3,18 @@ defmodule Scout.SmokeLocalTest do
   use ExUnit.Case, async: true
 
   test "local study runs deterministically with seed" do
-    study = %{
+    study = %Scout.Study{
       id: "t-#{:erlang.unique_integer([:positive])}",
       goal: :maximize,
       max_trials: 12,
       parallelism: 4,
       seed: 111,
       sampler: Scout.Sampler.Bandit,
+      sampler_opts: %{},
       pruner: nil,
+      pruner_opts: %{},
+      executor: Scout.Executor.Local,
+      metadata: %{},
       search_space: fn _ix -> %{x: :rand.uniform()} end,
       objective: fn %{x: x} -> x end
     }
