@@ -195,7 +195,7 @@ defmodule Scout.Easy do
   # Private helper functions
   
   defp ensure_scout_started do
-    case Application.ensure_all_started(:scout) do
+    case Application.ensure_all_started(:scout_core) do
       {:ok, _} -> :ok
       {:error, {:already_started, _}} -> :ok
       _ ->
@@ -203,7 +203,7 @@ defmodule Scout.Easy do
         case Process.whereis(Scout.Store) do
           nil -> 
             # Start the store using the configured adapter
-            adapter = Application.get_env(:scout, :store_adapter, Scout.Store.ETS)
+            adapter = Application.get_env(:scout_core, :store_adapter, Scout.Store.ETS)
             {:ok, _} = adapter.start_link([])
             :ok
           _ -> 
@@ -241,8 +241,8 @@ defmodule Scout.Easy do
   defp resolve_sampler(_), do: Scout.Sampler.RandomSearch
 
   defp resolve_pruner(:median), do: Scout.Pruner.MedianPruner
-  defp resolve_pruner(:percentile), do: Scout.Pruner.PercentilePruner  
-  defp resolve_pruner(:hyperband), do: Scout.Pruner.HyperbandPruner
+  defp resolve_pruner(:percentile), do: Scout.Pruner.PercentilePruner
+  defp resolve_pruner(:hyperband), do: Scout.Pruner.Hyperband
   defp resolve_pruner(module) when is_atom(module), do: module
   defp resolve_pruner(_), do: nil
 end
