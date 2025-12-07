@@ -79,9 +79,9 @@ jobs:
         # Extract coverage percentage and enforce minimum
         COVERAGE=$(mix test --cover 2>&1 | grep -o '[0-9]*\.[0-9]*%' | head -1 | sed 's/%//')
         echo "Test coverage: ${COVERAGE}%"
-        
-        # Enforce 80% minimum coverage
-        THRESHOLD=80.0
+
+        # Enforce 90% minimum coverage (v0.3.0 quality gate)
+        THRESHOLD=90.0
         if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
           echo "❌ Coverage $COVERAGE% is below threshold $THRESHOLD%"
           exit 1
@@ -164,12 +164,68 @@ jobs:
       run: |
         # Run performance-sensitive tests
         echo "Running performance regression tests..."
-        
+
         # Test ETS operations scale reasonably
         mix test test/scout/store/ets_invariants_test.exs --include performance
-        
+
         # Could add more perf tests here
         echo "✅ Performance regression checks passed"
+
+    - name: Benchmark smoke tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/scout_test
+      run: |
+        # Run quick smoke tests on benchmarks to catch regressions
+        echo "Running benchmark smoke tests..."
+        cd apps/scout_core
+
+        # Test benchmark infrastructure loads
+        echo "Testing benchmark/util.exs..."
+        elixir -r benchmark/util.exs -e "IO.puts(\"✓ Benchmark utils loaded\")"
+
+        # Run minimal versions of each benchmark (reduced trials for speed)
+        echo "Testing sampler_comparison.exs..."
+        timeout 60s mix run -e '
+          Code.require_file("benchmark/util.exs", __DIR__)
+          result = Scout.Easy.optimize(
+            &Benchmark.Util.sphere/1,
+            Benchmark.Util.continuous_space(2, -5, 5),
+            n_trials: 5,
+            sampler: :random,
+            direction: :minimize
+          )
+          IO.puts("✓ Sampler smoke test passed: #{result.best_value}")
+        ' || (echo "❌ Sampler benchmark smoke test failed" && exit 1)
+
+        echo "Testing scaling.exs..."
+        timeout 60s mix run -e '
+          Code.require_file("benchmark/util.exs", __DIR__)
+          result = Scout.Easy.optimize(
+            &Benchmark.Util.rastrigin/1,
+            Benchmark.Util.continuous_space(2, -5.12, 5.12),
+            n_trials: 5,
+            sampler: :tpe,
+            direction: :minimize
+          )
+          IO.puts("✓ Scaling smoke test passed: #{result.best_value}")
+        ' || (echo "❌ Scaling benchmark smoke test failed" && exit 1)
+
+        echo "Testing pruner_effectiveness.exs..."
+        timeout 60s mix run -e '
+          Code.require_file("benchmark/util.exs", __DIR__)
+          result = Scout.Easy.optimize(
+            &Benchmark.Util.rastrigin/1,
+            Benchmark.Util.continuous_space(2, -5.12, 5.12),
+            n_trials: 5,
+            sampler: :tpe,
+            pruner: :median,
+            direction: :minimize
+          )
+          IO.puts("✓ Pruner smoke test passed: #{result.best_value}")
+        ' || (echo "❌ Pruner benchmark smoke test failed" && exit 1)
+
+        cd ../..
+        echo "✅ All benchmark smoke tests passed"
 
     - name: Generate coverage report
       if: matrix.elixir == '1.16' && matrix.otp == '26'
