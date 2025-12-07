@@ -73,15 +73,30 @@ defmodule Scout.Store.ETS do
   
   @impl Scout.Store.Adapter
   def list_trials(study_id, _filters \\ []) do
-    # FIXED: Actually filter by study_id
-    :ets.foldl(fn {{sid, tid}, t}, acc -> 
+    # FIXED: Actually filter by study_id and populate intermediate_values
+    :ets.foldl(fn {{sid, tid}, t}, acc ->
       if sid == study_id do
-        [Map.put(t, :id, tid) | acc]
+        # Populate intermediate_values from observations
+        intermediate_values = get_intermediate_values_for_trial(study_id, tid)
+        trial = t
+        |> Map.put(:id, tid)
+        |> Map.put(:intermediate_values, intermediate_values)
+        [trial | acc]
       else
         acc
       end
-    end, [], @trials) 
+    end, [], @trials)
     |> Enum.reverse()
+  end
+
+  defp get_intermediate_values_for_trial(study_id, trial_id) do
+    # Collect all observations for this trial across all brackets and rungs
+    :ets.foldl(fn
+      {{^study_id, _bracket, rung}, ^trial_id, score}, acc ->
+        Map.put(acc, rung, score)
+      _, acc ->
+        acc
+    end, %{}, @obs)
   end
   
   @impl Scout.Store.Adapter

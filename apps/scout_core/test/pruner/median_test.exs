@@ -13,14 +13,21 @@ defmodule Scout.Pruner.MedianTest do
       {:error, {:already_started, pid}} -> {pid, false}
     end
 
+    # Generate unique study name to prevent test contamination
+    unique_suffix = Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
+    study_name = "test-study-#{unique_suffix}"
+
     on_exit(fn ->
+      # Clean up study to prevent contamination
+      Scout.Store.delete_study(study_name)
+
       # Only stop if we started it
       if started_by_test? and Process.alive?(pid) do
         GenServer.stop(pid, :normal, 1000)
       end
     end)
 
-    {:ok, store_pid: pid}
+    {:ok, store_pid: pid, study_name: study_name}
   end
 
   describe "init/1" do
@@ -84,8 +91,8 @@ defmodule Scout.Pruner.MedianTest do
   end
 
   describe "should_prune?/5 - warmup phase" do
-    test "does not prune during warmup steps" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "does not prune during warmup steps", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_warmup_steps: 5, n_startup_trials: 3})
 
       # Create completed trials
@@ -98,9 +105,8 @@ defmodule Scout.Pruner.MedianTest do
   end
 
   describe "should_prune?/5 - interval steps" do
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "only evaluates at interval steps" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "only evaluates at interval steps", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_warmup_steps: 0, interval_steps: 2, n_startup_trials: 3})
 
       create_completed_trials(study.study_name, 5)
@@ -117,8 +123,8 @@ defmodule Scout.Pruner.MedianTest do
   end
 
   describe "should_prune?/5 - startup trials" do
-    test "does not prune if not enough startup trials" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "does not prune if not enough startup trials", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 10, n_warmup_steps: 0})
 
       # Only 3 completed trials (< startup threshold)
@@ -130,9 +136,8 @@ defmodule Scout.Pruner.MedianTest do
   end
 
   describe "should_prune?/5 - median comparison" do
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "prunes trials worse than median" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "prunes trials worse than median", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 3, n_warmup_steps: 0})
 
       # Create trials with intermediate values at step 5
@@ -154,9 +159,8 @@ defmodule Scout.Pruner.MedianTest do
       assert should_prune == false
     end
 
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "handles odd number of values for median" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "handles odd number of values for median", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 3, n_warmup_steps: 0})
 
       # Values: [1.0, 3.0, 5.0] -> median = 3.0
@@ -173,9 +177,8 @@ defmodule Scout.Pruner.MedianTest do
       assert should_prune == false
     end
 
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "handles even number of values for median" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "handles even number of values for median", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 3, n_warmup_steps: 0})
 
       # Values: [1.0, 2.0, 4.0, 5.0] -> median = (2.0 + 4.0) / 2 = 3.0
@@ -195,9 +198,8 @@ defmodule Scout.Pruner.MedianTest do
   end
 
   describe "should_prune?/5 - edge cases" do
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "does not prune when no intermediate values at step" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "does not prune when no intermediate values at step", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 3, n_warmup_steps: 0})
 
       # Trials have intermediate values at step 5, but we check step 10
@@ -211,9 +213,8 @@ defmodule Scout.Pruner.MedianTest do
       assert should_prune == false
     end
 
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "handles single completed trial" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "handles single completed trial", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 1, n_warmup_steps: 0})
 
       # Single trial with value 5.0 at step 3
@@ -227,9 +228,8 @@ defmodule Scout.Pruner.MedianTest do
       assert should_prune == false
     end
 
-    @tag :skip  # MedianPruner expects intermediate_values field but Store doesn't populate it
-    test "handles trials with missing intermediate values" do
-      study = Easy.create_study(name: "test-study", direction: :minimize)
+    test "handles trials with missing intermediate values", %{study_name: study_name} do
+      study = Easy.create_study(name: study_name, direction: :minimize)
       state = MedianPruner.init(%{n_startup_trials: 2, n_warmup_steps: 0})
 
       # Mix of trials with and without intermediate values at step 5
