@@ -35,6 +35,7 @@ config :scout_dashboard, ScoutDashboardWeb.Endpoint,
 
 if config_env() == :dev do
   config :scout_dashboard, ScoutDashboardWeb.Endpoint,
+    server: true,
     http: [ip: {127,0,0,1}, port: 4050],
     debug_errors: true,
     code_reloader: true,
