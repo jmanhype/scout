@@ -11,9 +11,21 @@ Scout is a production-ready hyperparameter optimization framework with >99% feat
 
 ## Quick Start
 
+**Try it now - no database required!**
+
+```bash
+git clone https://github.com/your-org/scout
+cd scout && mix deps.get
+cd apps/scout_core && mix run ../../quick_start.exs
+```
+
+See [QUICK_START.md](QUICK_START.md) for a complete 30-second tutorial.
+
+**From code:**
+
 ```elixir
-# Add to mix.exs
-{:scout, "~> 0.3"}
+# Start Scout (uses ETS - no database needed)
+Application.ensure_all_started(:scout_core)
 
 # Optimize like Optuna
 result = Scout.Easy.optimize(

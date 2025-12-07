@@ -10,11 +10,11 @@ config :scout_core, Scout.Repo,
   hostname: "localhost",
   pool_size: 10
 
-config :scout_core, 
+config :scout_core,
   ecto_repos: [Scout.Repo],
-  # Storage adapter: Scout.Store.Postgres (recommended for production)
-  # Use Scout.Store.ETS for testing/development without DB
-  store_adapter: Scout.Store.Postgres
+  # Storage adapter: Scout.Store.ETS (default - no setup required)
+  # Use Scout.Store.Postgres for production with persistence
+  store_adapter: Scout.Store.ETS
 
 # Dashboard is a separate OTP app config; default OFF for safety
 config :scout_dashboard,
@@ -48,3 +48,6 @@ if config_env() == :prod do
     http: [ip: {0,0,0,0}, port: String.to_integer(System.get_env("PORT") || "4050")],
     secret_key_base: System.get_env("SECRET_KEY_BASE") || "CHANGE_ME"
 end
+
+# Configure Swoosh to use Finch (already in deps) instead of Hackney
+config :swoosh, :api_client, Swoosh.ApiClient.Finch

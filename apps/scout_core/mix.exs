@@ -75,15 +75,17 @@ defmodule ScoutCore.MixProject do
 
   defp deps do
     [
-      # Core dependencies ONLY - no Phoenix!
-      {:ecto_sql, "~> 3.10"},
-      {:postgrex, ">= 0.0.0"},
-      {:oban, "~> 2.15"},
+      # Core dependencies - always required
       {:telemetry, "~> 1.2"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
-      
+
+      # Optional: Only needed if using Postgres adapter
+      {:ecto_sql, "~> 3.10", optional: true},
+      {:postgrex, ">= 0.0.0", optional: true},
+      {:oban, "~> 2.15", optional: true},
+
       # Dev/Test
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:excoveralls, "~> 0.18", only: :test, runtime: false},
@@ -94,10 +96,13 @@ defmodule ScoutCore.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup"],
+      # Default setup uses ETS (no DB required)
+      setup: ["deps.get"],
+      # Optional: run these if you want to use Postgres
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      # Tests use ETS by default
+      test: ["test"]
     ]
   end
 end

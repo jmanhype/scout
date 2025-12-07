@@ -27,10 +27,13 @@ defmodule Scout.Umbrella.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup"],
+      # Default setup uses ETS (no DB required)
+      setup: ["deps.get"],
+      # Optional: run these if you want to use Postgres
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # Tests use ETS by default
+      test: ["test"],
       quality: ["format", "credo --strict"]
     ]
   end
