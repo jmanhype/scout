@@ -91,19 +91,19 @@ Scout implements four primary sampling strategies with distinct performance char
 ### 1. RandomSearch: Surprisingly Competitive Baseline
 
 With limited trial budgets (50 trials), RandomSearch provides strong baseline performance:
-- ✅ Consistent across runs
-- ✅ No hyperparameter tuning required
-- ✅ Works well on both convex and non-convex functions
-- ✅ Simple to understand and debug
+- PASS Consistent across runs
+- PASS No hyperparameter tuning required
+- PASS Works well on both convex and non-convex functions
+- PASS Simple to understand and debug
 
 **When to use**: Quick experiments, baseline comparisons, functions where adaptive methods struggle
 
 ### 2. CMA-ES: Strong for Continuous Optimization
 
 CMA-ES shows promise, especially on:
-- ✅ Continuous parameter spaces
-- ✅ Low-dimensional problems (2-10 dimensions)
-- ✅ When population-based search is beneficial
+- PASS Continuous parameter spaces
+- PASS Low-dimensional problems (2-10 dimensions)
+- PASS When population-based search is beneficial
 
 **Best result**: 0.17 on Rosenbrock (better than Random's best 0.24)
 
@@ -112,18 +112,18 @@ CMA-ES shows promise, especially on:
 ### 3. TPE: Needs More Trials
 
 TPE (Tree-structured Parzen Estimator) shows potential but:
-- ⚠️ Higher variance with limited trials
-- ⚠️ Requires more trials to build good models
-- ✅ Would likely improve with 200+ trials
+- Higher variance with limited trials
+- Requires more trials to build good models
+- PASS Would likely improve with 200+ trials
 
 **When to use**: Large trial budgets (200+), high-dimensional spaces, hyperparameter tuning
 
 ### 4. Grid: Limited by Dimensionality
 
 Grid search severely limited by:
-- ❌ Exponential growth with dimensions
-- ❌ 50 trials → 7×7 grid in 2D (coarse)
-- ❌ Often samples boundary regions
+- Exponential growth with dimensions
+- 50 trials → 7×7 grid in 2D (coarse)
+- Often samples boundary regions
 
 **When to use**: Very low dimensions (1-2), small discrete spaces, exhaustive search needed
 
@@ -212,10 +212,10 @@ Finished in 0.2 seconds
 
 Sampler comparison reveals important insights for Scout users:
 
-✅ **RandomSearch** provides excellent baseline - don't underestimate it
-✅ **CMA-ES** excels at continuous optimization with modest trial budgets
-✅ **TPE** needs larger budgets to show its strengths
-✅ **Grid** limited to very low dimensions or small discrete spaces
+PASS **RandomSearch** provides excellent baseline - don't underestimate it
+PASS **CMA-ES** excels at continuous optimization with modest trial budgets
+PASS **TPE** needs larger budgets to show its strengths
+PASS **Grid** limited to very low dimensions or small discrete spaces
 
 **For most users**: Start with RandomSearch for quick exploration, then switch to CMA-ES or TPE for larger optimization runs.
 

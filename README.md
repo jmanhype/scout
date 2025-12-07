@@ -1,13 +1,15 @@
-# 🎯 Scout - Production-Ready Hyperparameter Optimization for Elixir
+# Scout
+
+**Production-Ready Hyperparameter Optimization for Elixir**
 
 [![Hex.pm](https://img.shields.io/badge/hex-scout-blue)](https://hex.pm/packages/scout)
 [![Documentation](https://img.shields.io/badge/docs-hexdocs-green)](https://hexdocs.pm/scout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://hub.docker.com/r/scout/scout)
 
-Scout is a **production-ready hyperparameter optimization framework** with **>99% feature parity with Optuna**, leveraging Elixir's BEAM platform for superior fault tolerance, real-time dashboards, and native distributed computing.
+Scout is a production-ready hyperparameter optimization framework with >99% feature parity with Optuna, leveraging Elixir's BEAM platform for superior fault tolerance, real-time dashboards, and native distributed computing.
 
-## ⚡ Quick Start (3 Lines!)
+## Quick Start
 
 ```elixir
 # Add to mix.exs
@@ -23,48 +25,52 @@ result = Scout.Easy.optimize(
 IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 ```
 
-## 🚀 Why Choose Scout?
+## Why Scout?
 
-### ✅ **Complete Feature Parity with Optuna**
+### Complete Feature Parity with Optuna
+
 **PROVEN: >99% parity** - All major Optuna features implemented and working:
 
 - **23 Samplers**: TPE (all variants), CMA-ES, NSGA-II, QMC, GP-BO, Random, Grid
-- **7 Pruners**: Median, Percentile, Patient, Threshold, Wilcoxon, SuccessiveHalving, Hyperband  
+- **7 Pruners**: Median, Percentile, Patient, Threshold, Wilcoxon, SuccessiveHalving, Hyperband
 - **Multi-objective**: NSGA-II + MOTPE with Pareto dominance
 - **Advanced TPE**: Multivariate, conditional, prior-weighted, warm-starting
 - **ML Integration**: Native Axon neural network support
-- **3-Line API**: `Scout.Easy.optimize()` matches Optuna exactly
+- **Simple API**: `Scout.Easy.optimize()` matches Optuna exactly
 
-### 🌐 **Real-Time Dashboard**
-- **Phoenix LiveView** dashboard with live progress tracking
-- **Interactive visualizations**: Parameter correlation, convergence plots
-- **Study management**: Pause/resume/cancel operations
-- **Multi-study monitoring**: Track multiple optimizations simultaneously
+### Real-Time Dashboard
 
-### ⚡ **BEAM Platform Advantages**
+- Phoenix LiveView dashboard with live progress tracking
+- Interactive visualizations: Parameter correlation, convergence plots
+- Study management: Pause/resume/cancel operations
+- Multi-study monitoring: Track multiple optimizations simultaneously
+
+### BEAM Platform Advantages
+
 - **True fault tolerance**: Individual trials can't crash studies
-- **Hot code reloading**: Update samplers during long optimizations  
+- **Hot code reloading**: Update samplers during long optimizations
 - **Native distribution**: Multi-node optimization out of the box
 - **Actor model**: No shared state, no race conditions
 - **Supervision trees**: Automatic recovery from failures
 
-### 🐳 **Production-Ready Infrastructure**
+### Production-Ready Infrastructure
+
 - **Docker**: Single-command deployment with docker-compose
 - **Kubernetes**: Complete manifests with auto-scaling, persistence, monitoring
 - **Observability**: Prometheus metrics + Grafana dashboards
 - **Security**: HTTPS, secrets management, non-root containers
 - **High Availability**: Multi-replica deployment with load balancing
 
-## 📊 Performance Benchmarks
+## Performance Benchmarks
 
-Scout demonstrates **proven Optuna parity** on standard optimization benchmarks:
+Scout demonstrates proven Optuna parity on standard optimization benchmarks:
 
 | Function | Scout RandomSearch | Optuna RandomSampler | Status |
 |----------|-------------------|----------------------|--------|
-| **Sphere (5D)** | 8.21 ± 2.28 | ~10-15 (typical) | ✅ **Comparable** |
-| **Rosenbrock (2D)** | 0.29 ± 0.34 | ~0.1-1.0 (typical) | ✅ **Comparable** |
-| **Rastrigin (5D)** | 32.55 ± 9.07 | ~20-50 (typical) | ✅ **Comparable** |
-| **Ackley (2D)** | 2.36 ± 1.21 | ~1-5 (typical) | ✅ **Comparable** |
+| **Sphere (5D)** | 8.21 ± 2.28 | ~10-15 (typical) | Comparable |
+| **Rosenbrock (2D)** | 0.29 ± 0.34 | ~0.1-1.0 (typical) | Comparable |
+| **Rastrigin (5D)** | 32.55 ± 9.07 | ~20-50 (typical) | Comparable |
+| **Ackley (2D)** | 2.36 ± 1.21 | ~1-5 (typical) | Comparable |
 
 **Methodology**: 3 runs × 100 trials per function. See [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) for:
 - Complete methodology and mathematical definitions
@@ -72,9 +78,7 @@ Scout demonstrates **proven Optuna parity** on standard optimization benchmarks:
 - Reproduction instructions
 - Comparison with Optuna performance
 
-*Same algorithms, same performance, better platform.*
-
-## 🛠️ Installation
+## Installation
 
 ```elixir
 # mix.exs
@@ -97,7 +101,7 @@ mix scout.server
 # Dashboard: http://localhost:4050
 ```
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 ```bash
 # Quick start
@@ -111,18 +115,18 @@ docker-compose up -d
 # Prometheus Metrics: http://localhost:9090
 ```
 
-## ☸️ Kubernetes Deployment
+## Kubernetes Deployment
 
 ```bash
 # Production deployment
 kubectl apply -f k8s/postgres.yaml    # Database
-kubectl apply -f k8s/secrets.yaml     # Configuration  
+kubectl apply -f k8s/secrets.yaml     # Configuration
 kubectl apply -f k8s/deployment.yaml  # 3-replica Scout app
 
 # Auto-scaling, persistence, monitoring included
 ```
 
-## 📊 Real ML Example
+## Real ML Example
 
 ```elixir
 # Neural network hyperparameter optimization
@@ -133,25 +137,25 @@ result = Scout.Easy.optimize(
       neurons: params.neurons,
       dropout: params.dropout
     )
-    
+
     # Train with early stopping
     for epoch <- 1..20 do
       loss = train_epoch(model, params.learning_rate, params.batch_size)
-      
+
       case report_fn.(loss, epoch) do
         :continue -> :ok
         :prune -> throw(:early_stop)  # Hyperband pruning
       end
     end
-    
+
     validate_model(model)
   end,
   %{
     # Architecture
     n_layers: {:int, 2, 8},
-    neurons: {:int, 32, 512}, 
+    neurons: {:int, 32, 512},
     dropout: {:uniform, 0.1, 0.5},
-    
+
     # Training
     learning_rate: {:log_uniform, 1e-5, 1e-1},
     batch_size: {:choice, [16, 32, 64, 128]},
@@ -169,12 +173,12 @@ IO.puts("Best accuracy: #{result.best_value}")
 IO.puts("Best params: #{inspect(result.best_params)}")
 ```
 
-## 🌐 Distributed Optimization
+## Distributed Optimization
 
 ```elixir
 # Multi-node setup
 Node.connect(:"worker@node1")
-Node.connect(:"worker@node2") 
+Node.connect(:"worker@node2")
 
 result = Scout.Easy.optimize(
   expensive_ml_objective,
@@ -186,41 +190,42 @@ result = Scout.Easy.optimize(
 )
 ```
 
-## 🔄 Migration from Optuna
+## Migration from Optuna
 
-Scout provides **drop-in replacement** simplicity:
+Scout provides drop-in replacement simplicity:
 
+**Optuna (Python)**
 ```python
-# Optuna (Python)
 import optuna
 study = optuna.create_study()
 study.optimize(objective, n_trials=100)
 print(study.best_params)
 ```
 
+**Scout (Elixir)**
 ```elixir
-# Scout (Elixir) - Same experience, better platform
 result = Scout.Easy.optimize(objective, search_space, n_trials: 100)
 IO.puts(inspect(result.best_params))
 ```
 
-**Migration Benefits:**
-- ✅ **Same algorithms** (TPE, Hyperband, NSGA-II) 
-- ✅ **Better visualization** (real-time vs static)
-- ✅ **Superior fault tolerance** (BEAM supervision)
-- ✅ **Native distribution** (BEAM clustering + Oban)
-- ✅ **Production infrastructure** (Docker + K8s ready)
+### Migration Benefits
 
-## 📚 Documentation
+- Same algorithms (TPE, Hyperband, NSGA-II)
+- Better visualization (real-time vs static)
+- Superior fault tolerance (BEAM supervision)
+- Native distribution (BEAM clustering + Oban)
+- Production infrastructure (Docker + K8s ready)
 
-- **[Quick Start](examples/quick_start.exs)** - 3-line examples
-- **[Benchmark Results](BENCHMARK_RESULTS.md)** - Optuna parity validation and performance analysis
-- **[Deployment Guide](DEPLOYMENT.md)** - Docker + Kubernetes setup
-- **[API Reference](https://hexdocs.pm/scout)** - Complete documentation
-- **[Examples](examples/)** - Real ML optimization examples
-- **[Proof Scripts](examples/proof_scripts/)** - Performance validation
+## Documentation
 
-## 🏗️ Architecture
+- [Quick Start](examples/quick_start.exs) - 3-line examples
+- [Benchmark Results](BENCHMARK_RESULTS.md) - Optuna parity validation and performance analysis
+- [Sampler Comparison](benchmark/SAMPLER_COMPARISON.md) - RandomSearch, TPE, CMA-ES, Grid comparison
+- [Deployment Guide](DEPLOYMENT.md) - Docker + Kubernetes setup
+- [API Reference](https://hexdocs.pm/scout) - Complete documentation
+- [Examples](examples/) - Real ML optimization examples
+
+## Architecture
 
 ```
 Scout Production Stack
@@ -235,17 +240,17 @@ Scout Production Stack
 └── Monitoring Stack           # Prometheus + Grafana
 ```
 
-## 🎊 What's New in v0.3
+## What's New in v0.3
 
-- ✅ **Production Infrastructure**: Docker + K8s + monitoring
-- ✅ **>99% Optuna Parity**: All major samplers and pruners
-- ✅ **Real-time Dashboard**: Phoenix LiveView monitoring
-- ✅ **Distributed Execution**: Oban job queue integration
-- ✅ **Enterprise Security**: HTTPS, secrets, non-root containers
-- ✅ **Auto-scaling**: Kubernetes horizontal pod autoscaling
-- ✅ **Comprehensive Testing**: Performance validation scripts
+- **Production Infrastructure**: Docker + K8s + monitoring
+- **>99% Optuna Parity**: All major samplers and pruners
+- **Real-time Dashboard**: Phoenix LiveView monitoring
+- **Distributed Execution**: Oban job queue integration
+- **Enterprise Security**: HTTPS, secrets, non-root containers
+- **Auto-scaling**: Kubernetes horizontal pod autoscaling
+- **Comprehensive Testing**: Performance validation scripts
 
-## 🎯 Production Features
+## Production Features
 
 - **High Availability**: Multi-replica deployment with health checks
 - **Persistent Storage**: PostgreSQL with backup support
@@ -255,25 +260,25 @@ Scout Production Stack
 - **Fault Tolerance**: BEAM supervision trees + retry logic
 - **Study Management**: Pause/resume/cancel operations via dashboard
 
-## 🤝 Contributing
+## Contributing
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/scout/scout/issues)
-- 💡 **Features**: Propose new samplers or dashboard features
-- 📝 **Docs**: Improve examples and deployment guides
-- 🧪 **Testing**: Add benchmarks and production validation
+- **Issues**: [GitHub Issues](https://github.com/scout/scout/issues)
+- **Features**: Propose new samplers or dashboard features
+- **Docs**: Improve examples and deployment guides
+- **Testing**: Add benchmarks and production validation
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- **Optuna team** for algorithmic foundations
-- **Elixir/Phoenix community** for the incredible platform
-- **BEAM ecosystem** for unparalleled fault tolerance
+- Optuna team for algorithmic foundations
+- Elixir/Phoenix community for the incredible platform
+- BEAM ecosystem for unparalleled fault tolerance
 
 ---
 
-**Scout: Enterprise-grade hyperparameter optimization that scales with your ambitions.** 🚀
+**Scout: Enterprise-grade hyperparameter optimization that scales with your ambitions.**
 
 [Quick Start](examples/quick_start.exs) | [Benchmarks](BENCHMARK_RESULTS.md) | [Deploy](DEPLOYMENT.md) | [Dashboard](http://localhost:4050) | [Examples](examples/)
