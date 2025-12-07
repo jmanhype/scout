@@ -4,7 +4,7 @@ defmodule ScoutCore.MixProject do
   def project do
     [
       app: :scout_core,  # Directory name must match in umbrella
-      version: "0.3.0",
+      version: "0.3.1",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -44,7 +44,7 @@ defmodule ScoutCore.MixProject do
   defp package do
     [
       name: "scout",
-      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
+      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG* GETTING_STARTED* API_GUIDE* BENCHMARK_RESULTS*),
       licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/jmanhype/scout",
@@ -56,9 +56,18 @@ defmodule ScoutCore.MixProject do
 
   defp docs do
     [
-      main: "Scout",
-      extras: ["README.md"],
-      source_ref: "v0.3.0",
+      main: "readme",
+      extras: [
+        "../../README.md": [title: "Overview", filename: "readme"],
+        "../../GETTING_STARTED.md": [title: "Getting Started"],
+        "../../API_GUIDE.md": [title: "API Guide"],
+        "../../BENCHMARK_RESULTS.md": [title: "Benchmarks"]
+      ],
+      groups_for_extras: [
+        "Guides": ~r/GETTING_STARTED|API_GUIDE/,
+        "Reference": ~r/BENCHMARK/
+      ],
+      source_ref: "v0.3.1",
       source_url: "https://github.com/jmanhype/scout"
     ]
   end
