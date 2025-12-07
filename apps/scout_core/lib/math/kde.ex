@@ -36,10 +36,19 @@ defmodule Scout.Math.KDE do
   def gaussian_kde([]), do: fn _x -> @log_eps end
   
   def gaussian_kde([x]) do
-    # Delta function: high probability near the point, low elsewhere
+    # Single point: use narrow Gaussian centered at x
+    # Use small bandwidth for delta-function-like behavior
+    # bandwidth = 0.01 gives good discrimination:
+    #   - At distance 0.0001: log_density ≈ 0
+    #   - At distance 1.0: log_density ≈ -5000
+    bandwidth = 0.01
+    log_norm_const = :math.log(bandwidth * @sqrt_2pi)
+    inv_2h2 = -0.5 / (bandwidth * bandwidth)
+
     fn query ->
-      distance = abs(query - x)
-      if distance < 1.0e-6, do: 0.0, else: @log_eps  # log(1.0) = 0, log(eps) for far points
+      diff = query - x
+      log_density = inv_2h2 * diff * diff - log_norm_const
+      max(log_density, @log_eps)  # Floor at epsilon
     end
   end
   
@@ -69,11 +78,22 @@ defmodule Scout.Math.KDE do
   Useful for testing or when you have domain knowledge about optimal bandwidth.
   """
   @spec gaussian_kde_with_bandwidth([number()], float()) :: kde_fn()
-  def gaussian_kde_with_bandwidth(points, bandwidth) when bandwidth > 0 do
+  def gaussian_kde_with_bandwidth(points, bandwidth) do
+    # Ensure minimum bandwidth to prevent division by zero
+    # Use at least 0.001 for practical delta functions
+    safe_bandwidth = max(bandwidth, 0.001)
+
     case points do
       [] -> fn _x -> @log_eps end
-      [x] -> fn query -> if abs(query - x) < bandwidth/10, do: 0.0, else: @log_eps end
-      _ -> build_kde_function(points, bandwidth, length(points))
+      [x] ->
+        log_norm_const = :math.log(safe_bandwidth * @sqrt_2pi)
+        inv_2h2 = -0.5 / (safe_bandwidth * safe_bandwidth)
+        fn query ->
+          diff = query - x
+          log_density = inv_2h2 * diff * diff - log_norm_const
+          max(log_density, @log_eps)
+        end
+      _ -> build_kde_function(points, safe_bandwidth, length(points))
     end
   end
 
@@ -128,7 +148,8 @@ defmodule Scout.Math.KDE do
   Convert log-density to regular density.
   Safe against underflow - returns epsilon for very small values.
   """
-  @spec exp_density(float()) :: float()
+  @spec exp_density(float() | :neg_infinity) :: float()
+  def exp_density(:neg_infinity), do: @eps
   def exp_density(log_density) when log_density <= @log_eps, do: @eps
   def exp_density(log_density), do: :math.exp(log_density)
 
@@ -171,17 +192,25 @@ defmodule Scout.Math.KDE do
     try do
       for x <- test_points do
         density = kde_fn.(x)
-        
+
         cond do
-          not is_float(density) -> throw({:invalid_type, density})
-          not is_finite(density) -> throw({:not_finite, density})
-          density < @log_eps -> throw({:below_epsilon, density})
+          # Check for infinity/NaN atoms first (before type check)
+          density == :pos_infinity or density == :neg_infinity ->
+            throw({:not_finite, density})
+          not is_float(density) ->
+            throw({:invalid_type, density})
+          not is_finite(density) ->
+            throw({:not_finite, density})
+          density < @log_eps ->
+            throw({:below_epsilon, density})
           true -> :ok
         end
       end
-      
+
       :ok
     catch
+      # Catch ArithmeticError from NaN generation (e.g., sqrt(-1))
+      :error, :badarith -> {:error, {:infinite_or_nan, :nan}}
       {:invalid_type, val} -> {:error, {:invalid_return_type, val}}
       {:not_finite, val} -> {:error, {:infinite_or_nan, val}}
       {:below_epsilon, val} -> {:error, {:below_minimum_density, val}}

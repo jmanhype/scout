@@ -148,13 +148,18 @@ defmodule Scout.Math.KDETest do
     end
 
     test "bandwidth decreases with more data" do
+      # Use data with similar variance to isolate n^(-1/5) effect
       small_data = [1.0, 2.0, 3.0]
-      large_data = Enum.to_list(1..100) |> Enum.map(&(&1/10.0))
-      
+      # Generate 100 points with similar range (1-3) by repeating pattern
+      large_data = for i <- 1..100, do: 1.0 + rem(i, 21) / 10.0
+
       bandwidth_small = KDE.silverman_bandwidth(small_data)
       bandwidth_large = KDE.silverman_bandwidth(large_data)
-      
+
       # More data should lead to narrower bandwidth (n^(-1/5) factor)
+      # small: n=3, n^(-1/5) ≈ 0.80
+      # large: n=100, n^(-1/5) ≈ 0.40
+      # With similar variance, bandwidth_large should be ~half of bandwidth_small
       assert bandwidth_large < bandwidth_small
     end
 
