@@ -51,6 +51,19 @@ IO.puts("Press Ctrl+C twice to stop\n")
 # Wait for completion
 Task.await(task, :infinity)
 
-# Keep process alive so study stays in ETS
-IO.puts("\n✓ Keeping dashboard running. Press Ctrl+C to exit.")
-Process.sleep(:infinity)
+# With Postgres storage, data persists after exit!
+# With ETS storage, we need to keep process alive:
+storage_mode = Scout.Store.storage_mode()
+
+if storage_mode == :postgres do
+  IO.puts("\n✓ Study persisted to database. Safe to exit!")
+  IO.puts("  Start dashboard separately: mix phx.server")
+  IO.puts("  Or run this script again to keep dashboard running.")
+  IO.puts("\nExiting in 5 seconds... (Ctrl+C to keep running)")
+  Process.sleep(5000)
+else
+  IO.puts("\n⚠  ETS storage - keeping process alive so data doesn't vanish")
+  IO.puts("  (Enable Postgres for persistent storage)")
+  IO.puts("\n✓ Dashboard running. Press Ctrl+C to exit.")
+  Process.sleep(:infinity)
+end

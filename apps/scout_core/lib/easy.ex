@@ -17,9 +17,22 @@ defmodule Scout.Easy do
   
   @doc """
   Optimize an objective function with simple API matching Optuna.
-  
+
+  ## Storage Modes
+
+  Scout automatically selects storage based on availability:
+  - **Postgres** (persistent): Studies survive restarts, no `Process.sleep(:infinity)` needed
+  - **ETS** (in-memory): Fast but ephemeral, data lost when process exits
+
+  To enable Postgres persistence:
+  1. Set DATABASE_URL environment variable
+  2. Run `mix ecto.create && mix ecto.migrate`
+  3. Scout will auto-detect and use Postgres
+
+  Check current mode: `Scout.Store.storage_mode()  # => :postgres | :ets`
+
   ## Parameters
-  
+
     * `objective` - Function that takes params and returns score
     * `search_space` - Map defining parameter space
     * `opts` - Keyword list of options:
@@ -76,7 +89,11 @@ defmodule Scout.Easy do
     
     # Ensure Scout is started
     ensure_scout_started()
-    
+
+    # Log storage mode for visibility
+    storage_mode = Scout.Store.storage_mode()
+    IO.puts("Scout using #{storage_mode} storage (#{if storage_mode == :postgres, do: "persistent", else: "ephemeral"})")
+
     # Create Scout study
     study = %Scout.Study{
       id: study_name,
@@ -116,6 +133,7 @@ defmodule Scout.Easy do
           n_trials: res[:n_trials] || n_trials,
           study_name: study_name,
           study: study_name,  # Alias for compatibility
+          storage_mode: storage_mode,
           status: :completed
         }
         

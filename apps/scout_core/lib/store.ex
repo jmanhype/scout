@@ -19,8 +19,29 @@ defmodule Scout.Store do
   alias Scout.Store.Adapter
 
   # Runtime adapter configuration (prevents compile-time lock-in)
+  # Auto-detects Postgres if available, falls back to ETS
   defp adapter do
-    Application.get_env(:scout_core, :store_adapter, Scout.Store.ETS)
+    configured = Application.get_env(:scout_core, :store_adapter)
+
+    cond do
+      # Explicit configuration wins
+      configured != nil -> configured
+
+      # Auto-detect: use Postgres if database is available
+      postgres_available?() -> Scout.Store.Postgres
+
+      # Fall back to ETS (no setup required)
+      true -> Scout.Store.ETS
+    end
+  end
+
+  defp postgres_available? do
+    case Application.get_env(:scout_core, Scout.Repo) do
+      nil -> false
+      _config ->
+        # Check if Repo process is alive
+        Process.whereis(Scout.Repo) != nil
+    end
   end
 
   @doc """
@@ -77,6 +98,36 @@ defmodule Scout.Store do
 
   @spec health_check() :: :ok | {:error, term()}
   def health_check(), do: adapter().health_check()
+
+  @doc """
+  Returns the currently active storage adapter.
+
+  ## Examples
+
+      Scout.Store.current_adapter()
+      # => Scout.Store.Postgres  (if database available)
+      # => Scout.Store.ETS       (if no database)
+  """
+  @spec current_adapter() :: module()
+  def current_adapter(), do: adapter()
+
+  @doc """
+  Returns the storage mode as an atom.
+
+  ## Examples
+
+      Scout.Store.storage_mode()
+      # => :postgres  (persistent, survives restarts)
+      # => :ets       (in-memory, fast but ephemeral)
+  """
+  @spec storage_mode() :: :postgres | :ets
+  def storage_mode do
+    case adapter() do
+      Scout.Store.Postgres -> :postgres
+      Scout.Store.ETS -> :ets
+      _ -> :unknown
+    end
+  end
   
   # ============================================================================
   # EXPLICIT STATE TRANSITIONS (prevent leaky abstractions)
