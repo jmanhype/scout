@@ -45,6 +45,92 @@ defmodule Scout.StoreTest do
         end
       end
     end
+
+    test "auto-detects Postgres adapter when Repo is configured and running" do
+      # Save original configs
+      original_adapter = Application.get_env(:scout_core, :store_adapter)
+      original_repo_config = Application.get_env(:scout_core, Scout.Repo)
+
+      try do
+        # Remove explicit adapter setting to trigger auto-detection
+        Application.delete_env(:scout_core, :store_adapter)
+
+        # Configure Repo (simulating Postgres available scenario)
+        Application.put_env(:scout_core, Scout.Repo, [
+          database: "test_db",
+          username: "postgres",
+          password: "postgres",
+          hostname: "localhost"
+        ])
+
+        # Start a mock process with the Repo name to simulate running Repo
+        {:ok, mock_pid} = Agent.start_link(fn -> :ok end, name: Scout.Repo)
+
+        # Now adapter should auto-detect Postgres
+        adapter = Store.current_adapter()
+        assert adapter == Scout.Store.Postgres
+
+        # Clean up mock process
+        Process.exit(mock_pid, :normal)
+        Process.sleep(10)  # Give process time to exit
+      after
+        # Restore original configs
+        if original_adapter do
+          Application.put_env(:scout_core, :store_adapter, original_adapter)
+        else
+          Application.delete_env(:scout_core, :store_adapter)
+        end
+
+        if original_repo_config do
+          Application.put_env(:scout_core, Scout.Repo, original_repo_config)
+        else
+          Application.delete_env(:scout_core, Scout.Repo)
+        end
+      end
+    end
+
+    test "falls back to ETS when Repo is configured but process not running" do
+      # Save original configs
+      original_adapter = Application.get_env(:scout_core, :store_adapter)
+      original_repo_config = Application.get_env(:scout_core, Scout.Repo)
+
+      try do
+        # Remove explicit adapter setting
+        Application.delete_env(:scout_core, :store_adapter)
+
+        # Configure Repo but don't start the process
+        Application.put_env(:scout_core, Scout.Repo, [
+          database: "test_db",
+          username: "postgres",
+          password: "postgres",
+          hostname: "localhost"
+        ])
+
+        # Ensure no Scout.Repo process is running
+        case Process.whereis(Scout.Repo) do
+          nil -> :ok
+          pid -> Process.exit(pid, :kill)
+        end
+        Process.sleep(10)
+
+        # Should fall back to ETS since Repo process not available
+        adapter = Store.current_adapter()
+        assert adapter == Scout.Store.ETS
+      after
+        # Restore original configs
+        if original_adapter do
+          Application.put_env(:scout_core, :store_adapter, original_adapter)
+        else
+          Application.delete_env(:scout_core, :store_adapter)
+        end
+
+        if original_repo_config do
+          Application.put_env(:scout_core, Scout.Repo, original_repo_config)
+        else
+          Application.delete_env(:scout_core, Scout.Repo)
+        end
+      end
+    end
   end
 
   describe "storage_mode/0" do
@@ -57,6 +143,31 @@ defmodule Scout.StoreTest do
       # When ETS is active (default in tests)
       if Store.current_adapter() == Scout.Store.ETS do
         assert Store.storage_mode() == :ets
+      end
+    end
+
+    test "returns :unknown for unrecognized adapter module" do
+      # Save original config
+      original_adapter = Application.get_env(:scout_core, :store_adapter)
+
+      try do
+        # Create a custom/unknown adapter module
+        defmodule CustomUnknownAdapter do
+          @moduledoc false
+        end
+
+        # Set unknown adapter
+        Application.put_env(:scout_core, :store_adapter, CustomUnknownAdapter)
+
+        # Should return :unknown for unrecognized adapter
+        assert Store.storage_mode() == :unknown
+      after
+        # Restore original config
+        if original_adapter do
+          Application.put_env(:scout_core, :store_adapter, original_adapter)
+        else
+          Application.delete_env(:scout_core, :store_adapter)
+        end
       end
     end
   end
