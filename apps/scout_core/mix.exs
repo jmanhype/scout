@@ -29,8 +29,8 @@ defmodule ScoutCore.MixProject do
       description: description(),
       package: package(),
       docs: docs(),
-      source_url: "https://github.com/viable-systems/scout",
-      homepage_url: "https://github.com/viable-systems/scout"
+      source_url: "https://github.com/jmanhype/scout",
+      homepage_url: "https://github.com/jmanhype/scout"
     ]
   end
 
@@ -47,7 +47,7 @@ defmodule ScoutCore.MixProject do
       files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/viable-systems/scout",
+        "GitHub" => "https://github.com/jmanhype/scout",
         "Docs" => "https://hexdocs.pm/scout"
       },
       maintainers: ["Viable Systems"]
@@ -59,7 +59,7 @@ defmodule ScoutCore.MixProject do
       main: "Scout",
       extras: ["README.md"],
       source_ref: "v0.3.0",
-      source_url: "https://github.com/viable-systems/scout"
+      source_url: "https://github.com/jmanhype/scout"
     ]
   end
 
