@@ -6,7 +6,7 @@ defmodule Scout.Application do
   def start(_type, _args) do
     # Database components (only if PostgreSQL adapter is configured)
     repo_children = 
-      if Application.get_env(:scout_core, :store_adapter) == Scout.Store.Postgres do
+      if Application.get_env(:scout, :store_adapter) == Scout.Store.Postgres do
         [Scout.Repo]
       else
         []

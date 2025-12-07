@@ -1,4 +1,4 @@
 
 defmodule Scout.Repo do
-  use Ecto.Repo, otp_app: :scout_core, adapter: Ecto.Adapters.Postgres
+  use Ecto.Repo, otp_app: :scout, adapter: Ecto.Adapters.Postgres
 end

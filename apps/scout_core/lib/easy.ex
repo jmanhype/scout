@@ -195,7 +195,7 @@ defmodule Scout.Easy do
   # Private helper functions
   
   defp ensure_scout_started do
-    case Application.ensure_all_started(:scout_core) do
+    case Application.ensure_all_started(:scout) do
       {:ok, _} -> :ok
       {:error, {:already_started, _}} -> :ok
       _ ->
@@ -203,7 +203,7 @@ defmodule Scout.Easy do
         case Process.whereis(Scout.Store) do
           nil -> 
             # Start the store using the configured adapter
-            adapter = Application.get_env(:scout_core, :store_adapter, Scout.Store.ETS)
+            adapter = Application.get_env(:scout, :store_adapter, Scout.Store.ETS)
             {:ok, _} = adapter.start_link([])
             :ok
           _ -> 

@@ -3,7 +3,7 @@ defmodule ScoutCore.MixProject do
 
   def project do
     [
-      app: :scout_core,
+      app: :scout,  # Changed from :scout_core to match package name
       version: "0.3.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -13,7 +13,43 @@ defmodule ScoutCore.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+
+      # Hex publishing
+      description: description(),
+      package: package(),
+      docs: docs(),
+      source_url: "https://github.com/viable-systems/scout",
+      homepage_url: "https://github.com/viable-systems/scout"
+    ]
+  end
+
+  defp description do
+    """
+    Production-ready hyperparameter optimization for Elixir with >99% Optuna parity.
+    Leverages BEAM fault tolerance, real-time dashboards, and native distributed computing.
+    """
+  end
+
+  defp package do
+    [
+      name: "scout",
+      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/viable-systems/scout",
+        "Docs" => "https://hexdocs.pm/scout"
+      },
+      maintainers: ["Viable Systems"]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Scout",
+      extras: ["README.md"],
+      source_ref: "v0.3.0",
+      source_url: "https://github.com/viable-systems/scout"
     ]
   end
 

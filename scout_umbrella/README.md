@@ -1,4 +1,0 @@
-# ScoutUmbrella
-
-**TODO: Add description**
-
