@@ -52,3 +52,25 @@ end
 
 # Configure Swoosh to use Finch (already in deps) instead of Hackney
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
+
+# Configure esbuild
+config :esbuild,
+  version: "0.19.5",
+  default: [
+    args:
+      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../apps/scout_dashboard/assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+# Configure tailwind
+config :tailwind,
+  version: "3.3.5",
+  default: [
+    args: ~w(
+      --config=tailwind.config.js
+      --input=css/app.css
+      --output=../priv/static/assets/app.css
+    ),
+    cd: Path.expand("../apps/scout_dashboard/assets", __DIR__)
+  ]

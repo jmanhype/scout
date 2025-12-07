@@ -31,6 +31,7 @@ defmodule ScoutDashboardWeb do
     quote do
       use Phoenix.Component
       import Phoenix.HTML
+      unquote(verified_routes())
       alias ScoutDashboardWeb.Router.Helpers, as: Routes
     end
   end
