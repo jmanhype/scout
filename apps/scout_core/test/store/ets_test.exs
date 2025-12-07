@@ -637,6 +637,160 @@ defmodule Scout.Store.ETSTest do
     end
   end
 
+  describe "delete_trial/2" do
+    test "deletes specific trial from study" do
+      study = %{id: "delete-trial-study", name: "Test", goal: :minimize}
+      Store.put_study(study)
+
+      {:ok, id1} = Store.start_trial("delete-trial-study", %{x: 0.1})
+      {:ok, id2} = Store.start_trial("delete-trial-study", %{x: 0.2})
+
+      assert length(Store.list_trials("delete-trial-study")) == 2
+
+      assert :ok = Store.delete_trial("delete-trial-study", id1)
+
+      # Only id2 should remain
+      trials = Store.list_trials("delete-trial-study")
+      assert length(trials) == 1
+      assert hd(trials).id == id2
+
+      # id1 should not be fetchable
+      assert :error = Store.fetch_trial("delete-trial-study", id1)
+      assert {:ok, _} = Store.fetch_trial("delete-trial-study", id2)
+    end
+
+    test "does not affect trials in other studies" do
+      study1 = %{id: "study-a", name: "Study A", goal: :minimize}
+      study2 = %{id: "study-b", name: "Study B", goal: :minimize}
+      Store.put_study(study1)
+      Store.put_study(study2)
+
+      {:ok, id_a} = Store.start_trial("study-a", %{x: 0.1})
+      {:ok, id_b} = Store.start_trial("study-b", %{x: 0.2})
+
+      assert :ok = Store.delete_trial("study-a", id_a)
+
+      # study-b's trial should be unaffected
+      assert {:ok, _} = Store.fetch_trial("study-b", id_b)
+      assert length(Store.list_trials("study-b")) == 1
+    end
+  end
+
+  describe "mark_pruned/2 and pruned?/2" do
+    test "marks trial as pruned in events table" do
+      study = %{id: "event-prune-study", name: "Test", goal: :minimize}
+      Store.put_study(study)
+
+      {:ok, trial_id} = Store.start_trial("event-prune-study", %{x: 0.5})
+
+      # Initially not pruned
+      assert ETS.pruned?("event-prune-study", trial_id) == false
+
+      # Mark as pruned (cast is async, need small delay)
+      ETS.mark_pruned("event-prune-study", trial_id)
+      Process.sleep(10)
+
+      # Now should be pruned
+      assert ETS.pruned?("event-prune-study", trial_id) == true
+    end
+
+    test "can check multiple trials for pruned status" do
+      study = %{id: "multi-prune-study", name: "Test", goal: :minimize}
+      Store.put_study(study)
+
+      {:ok, id1} = Store.start_trial("multi-prune-study", %{x: 0.1})
+      {:ok, id2} = Store.start_trial("multi-prune-study", %{x: 0.2})
+      {:ok, id3} = Store.start_trial("multi-prune-study", %{x: 0.3})
+
+      # Mark only id2 as pruned
+      ETS.mark_pruned("multi-prune-study", id2)
+      Process.sleep(10)  # Allow async cast to complete
+
+      assert ETS.pruned?("multi-prune-study", id1) == false
+      assert ETS.pruned?("multi-prune-study", id2) == true
+      assert ETS.pruned?("multi-prune-study", id3) == false
+    end
+
+    test "pruned events are isolated by study" do
+      study1 = %{id: "prune-study-1", name: "Study 1", goal: :minimize}
+      study2 = %{id: "prune-study-2", name: "Study 2", goal: :minimize}
+      Store.put_study(study1)
+      Store.put_study(study2)
+
+      {:ok, id1} = Store.start_trial("prune-study-1", %{x: 0.1})
+      {:ok, id2} = Store.start_trial("prune-study-2", %{x: 0.2})
+
+      ETS.mark_pruned("prune-study-1", id1)
+      Process.sleep(10)  # Allow async cast to complete
+
+      assert ETS.pruned?("prune-study-1", id1) == true
+      assert ETS.pruned?("prune-study-2", id2) == false
+      # Same trial ID in different study should not be affected
+      assert ETS.pruned?("prune-study-2", id1) == false
+    end
+  end
+
+  describe "intermediate_values in list_trials" do
+    test "populates intermediate_values from observations" do
+      study = %{id: "intermediate-study", name: "Test", goal: :minimize}
+      Store.put_study(study)
+
+      {:ok, trial_id} = Store.start_trial("intermediate-study", %{x: 0.5})
+
+      # Record observations at different rungs
+      Store.record_observation("intermediate-study", trial_id, 0, 1, 0.9)
+      Store.record_observation("intermediate-study", trial_id, 0, 2, 0.8)
+      Store.record_observation("intermediate-study", trial_id, 0, 3, 0.7)
+
+      trials = Store.list_trials("intermediate-study")
+
+      assert length(trials) == 1
+      trial = hd(trials)
+
+      # intermediate_values should be populated
+      assert trial.intermediate_values == %{1 => 0.9, 2 => 0.8, 3 => 0.7}
+    end
+
+    test "handles trials with no observations" do
+      study = %{id: "no-obs-study", name: "Test", goal: :minimize}
+      Store.put_study(study)
+
+      {:ok, _trial_id} = Store.start_trial("no-obs-study", %{x: 0.5})
+
+      trials = Store.list_trials("no-obs-study")
+
+      assert length(trials) == 1
+      trial = hd(trials)
+
+      # intermediate_values should be empty map
+      assert trial.intermediate_values == %{}
+    end
+
+    test "only includes observations for specific trial" do
+      study = %{id: "multi-trial-obs-study", name: "Test", goal: :minimize}
+      Store.put_study(study)
+
+      {:ok, id1} = Store.start_trial("multi-trial-obs-study", %{x: 0.1})
+      {:ok, id2} = Store.start_trial("multi-trial-obs-study", %{x: 0.2})
+
+      # Record observations for both trials
+      Store.record_observation("multi-trial-obs-study", id1, 0, 1, 0.11)
+      Store.record_observation("multi-trial-obs-study", id1, 0, 2, 0.12)
+      Store.record_observation("multi-trial-obs-study", id2, 0, 1, 0.21)
+      Store.record_observation("multi-trial-obs-study", id2, 0, 2, 0.22)
+
+      trials = Store.list_trials("multi-trial-obs-study")
+      assert length(trials) == 2
+
+      # Each trial should only have its own intermediate values
+      trial1 = Enum.find(trials, &(&1.id == id1))
+      trial2 = Enum.find(trials, &(&1.id == id2))
+
+      assert trial1.intermediate_values == %{1 => 0.11, 2 => 0.12}
+      assert trial2.intermediate_values == %{1 => 0.21, 2 => 0.22}
+    end
+  end
+
   describe "edge cases" do
     test "handles very long study names" do
       long_name = String.duplicate("a", 1000)
