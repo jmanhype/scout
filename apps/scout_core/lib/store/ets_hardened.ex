@@ -146,6 +146,12 @@ defmodule Scout.Store.ETSHardened do
   end
 
   @impl Scout.Store.Adapter
+  def list_studies() do
+    :ets.foldl(fn {_id, study}, acc -> [study | acc] end, [], @tbl_studies)
+    |> Enum.reverse()
+  end
+
+  @impl Scout.Store.Adapter
   def health_check() do
     try do
       case Process.alive?(Process.whereis(__MODULE__)) do

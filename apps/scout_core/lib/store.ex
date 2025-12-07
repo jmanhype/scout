@@ -72,6 +72,9 @@ defmodule Scout.Store do
   @spec delete_study(study_id()) :: :ok | {:error, term()}
   def delete_study(study_id), do: adapter().delete_study(study_id)
 
+  @spec list_studies() :: [map()]
+  def list_studies(), do: adapter().list_studies()
+
   @spec health_check() :: :ok | {:error, term()}
   def health_check(), do: adapter().health_check()
   

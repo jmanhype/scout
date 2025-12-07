@@ -8,12 +8,10 @@ Application.ensure_all_started(:scout_core)
 Application.ensure_all_started(:scout_dashboard)
 
 IO.puts("✓ Scout core started")
-IO.puts("✓ Dashboard started at http://localhost:4050\n")
+IO.puts("✓ Dashboard started at http://localhost:4050")
 
 # Run an optimization in the background
 task = Task.async(fn ->
-  IO.puts("Starting optimization...")
-
   result = Scout.Easy.optimize(
     fn params ->
       # Simple sphere function: minimize x² + y²
@@ -35,13 +33,15 @@ task = Task.async(fn ->
   )
 
   IO.puts("\n=== Optimization Complete ===")
+  IO.puts("Study ID: #{result.study_name}")
   IO.puts("Best value: #{:io_lib.format("~.6f", [result.best_score])}")
   IO.puts("Best params: #{inspect(result.best_params)}")
 
   result
 end)
 
-IO.puts("\nOpen http://localhost:4050 to watch the optimization!")
+IO.puts("\nStarting optimization...")
+IO.puts("Open http://localhost:4050 to watch live!")
 IO.puts("Press Ctrl+C twice to stop\n")
 
 # Wait for the optimization
