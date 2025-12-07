@@ -2,6 +2,8 @@
 
 **Production-Ready Hyperparameter Optimization for Elixir**
 
+[![Build Status](https://github.com/jmanhype/scout/actions/workflows/ci.yml/badge.svg)](https://github.com/jmanhype/scout/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/jmanhype/scout/branch/main/graph/badge.svg)](https://codecov.io/gh/jmanhype/scout)
 [![Hex.pm](https://img.shields.io/badge/hex-scout-blue)](https://hex.pm/packages/scout)
 [![Documentation](https://img.shields.io/badge/docs-hexdocs-green)](https://hexdocs.pm/scout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -75,20 +77,29 @@ IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 
 ## Performance Benchmarks
 
-Scout demonstrates proven Optuna parity on standard optimization benchmarks:
+Scout demonstrates proven Optuna parity on standard optimization benchmarks with **90%+ test coverage** and comprehensive validation:
+
+### Optuna Parity Benchmarks
 
 | Function | Scout RandomSearch | Optuna RandomSampler | Status |
 |----------|-------------------|----------------------|--------|
-| **Sphere (5D)** | 8.21 ± 2.28 | ~10-15 (typical) | Comparable |
-| **Rosenbrock (2D)** | 0.29 ± 0.34 | ~0.1-1.0 (typical) | Comparable |
-| **Rastrigin (5D)** | 32.55 ± 9.07 | ~20-50 (typical) | Comparable |
-| **Ackley (2D)** | 2.36 ± 1.21 | ~1-5 (typical) | Comparable |
+| **Sphere (5D)** | 8.21 ± 2.28 | ~10-15 (typical) | ✅ Comparable |
+| **Rosenbrock (2D)** | 0.29 ± 0.34 | ~0.1-1.0 (typical) | ✅ Comparable |
+| **Rastrigin (5D)** | 32.55 ± 9.07 | ~20-50 (typical) | ✅ Comparable |
+| **Ackley (2D)** | 2.36 ± 1.21 | ~1-5 (typical) | ✅ Comparable |
 
-**Methodology**: 3 runs × 100 trials per function. See [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) for:
-- Complete methodology and mathematical definitions
-- Statistical analysis with mean, std dev, min/max scores
-- Reproduction instructions
-- Comparison with Optuna performance
+### v0.3.0 Comprehensive Benchmarks
+
+- **Sampler Comparison**: TPE, Random, Grid, Bandit on 2D/5D problems → [Results](BENCHMARK_RESULTS.md#sampler-comparison)
+- **Pruner Effectiveness**: Median, Percentile, Hyperband, SuccessiveHalving validation → [Results](BENCHMARK_RESULTS.md#pruner-effectiveness)
+- **Scaling & Parallelism**: Dimension scaling (2D→20D), parallel speedup (1-4 workers) → [Results](BENCHMARK_RESULTS.md#scaling-and-parallelism)
+
+**See [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md)** for complete analysis including:
+- Statistical methodology and mathematical function definitions
+- Sampler comparison showing TPE advantages on multimodal functions
+- Pruner configuration guidance and expected savings (30-70% compute time)
+- Parallel execution efficiency (60-90% with 2-4 workers)
+- Reproduction instructions for all benchmarks
 
 ## Installation
 
@@ -231,8 +242,7 @@ IO.puts(inspect(result.best_params))
 ## Documentation
 
 - [Quick Start](examples/quick_start.exs) - 3-line examples
-- [Benchmark Results](BENCHMARK_RESULTS.md) - Optuna parity validation and performance analysis
-- [Sampler Comparison](benchmark/SAMPLER_COMPARISON.md) - RandomSearch, TPE, CMA-ES, Grid comparison
+- [Benchmark Results](BENCHMARK_RESULTS.md) - Comprehensive benchmarks: Optuna parity, sampler comparison, pruner effectiveness, scaling
 - [Deployment Guide](DEPLOYMENT.md) - Docker + Kubernetes setup
 - [API Reference](https://hexdocs.pm/scout) - Complete documentation
 - [Examples](examples/) - Real ML optimization examples
@@ -254,13 +264,16 @@ Scout Production Stack
 
 ## What's New in v0.3
 
+- **90%+ Test Coverage**: Quality-assured public API with comprehensive test suite
+- **Comprehensive Benchmarks**: Sampler comparison, pruner effectiveness, scaling validation
+- **CI Quality Gates**: Automated coverage enforcement and benchmark smoke tests
 - **Production Infrastructure**: Docker + K8s + monitoring
-- **>99% Optuna Parity**: All major samplers and pruners
+- **>99% Optuna Parity**: All major samplers and pruners validated
 - **Real-time Dashboard**: Phoenix LiveView monitoring
 - **Distributed Execution**: Oban job queue integration
 - **Enterprise Security**: HTTPS, secrets, non-root containers
 - **Auto-scaling**: Kubernetes horizontal pod autoscaling
-- **Comprehensive Testing**: Performance validation scripts
+- **Performance Validation**: Complete benchmark suite with reproduction instructions
 
 ## Production Features
 
