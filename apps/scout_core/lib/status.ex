@@ -10,21 +10,54 @@ defmodule Scout.Status do
   def status(study_id) do
     with {:ok, _} <- @store_impl.get_study(study_id) do
       trials = @store_impl.list_trials(study_id)
-      brackets = trials |> Enum.map(& &1.bracket) |> Enum.uniq() |> Enum.sort()
-      per_bracket =
+
+      # Check if trials have bracket/rung metadata (Hyperband)
+      # Both :bracket AND :rung must exist for Hyperband
+      has_brackets = trials != [] and Map.has_key?(hd(trials), :bracket) and Map.has_key?(hd(trials), :rung)
+
+      per_bracket = if has_brackets do
+        brackets = trials |> Enum.map(& &1.bracket) |> Enum.uniq() |> Enum.sort()
+
+        # Build brackets structure - map bracket index to map of rung stats
         for b <- brackets, into: %{} do
           rungs = rungs_for(trials, b)
-          {b, %{
-            rungs: for r <- rungs, into: %{} do
-              # For now, just use trials directly as observations aren't needed for basic display
-              trial_ids = trials |> Enum.filter(&(&1.bracket == b)) |> Enum.map(& &1.id) |> MapSet.new()
-              %{pruned: pruned, running: running, done: done} = classify(trials, trial_ids, b)
-              obs_count = MapSet.size(trial_ids)
-              {r, %{observations: obs_count, pruned: pruned, running: running, completed: done}}
-            end
-          }}
+          rung_stats = for r <- rungs, into: %{} do
+            trial_ids = trials |> Enum.filter(&(Map.get(&1, :bracket) == b)) |> Enum.map(& &1.id) |> MapSet.new()
+            %{pruned: pruned, running: running, done: done} = classify(trials, trial_ids, b)
+            obs_count = MapSet.size(trial_ids)
+            {r, %{observed: obs_count, pruned: pruned, running: running, completed: done}}
+          end
+          {b, rung_stats}
         end
-      {:ok, %{study_id: study_id, brackets: per_bracket}}
+      else
+        # No Hyperband metadata - create single bracket with single rung
+        %{
+          0 => %{
+            0 => %{
+              observed: length(trials),
+              pruned: Enum.count(trials, &(&1.status == :pruned)),
+              running: Enum.count(trials, &(&1.status == :running)),
+              completed: Enum.count(trials, &(&1.status == :completed))
+            }
+          }
+        }
+      end
+
+      # Calculate totals
+      total_trials = length(trials)
+      total_running = Enum.count(trials, &(&1.status == :running))
+      total_pruned = Enum.count(trials, &(&1.status == :pruned))
+      total_completed = Enum.count(trials, &(&1.status == :completed))
+
+      {:ok, %{
+        brackets: per_bracket,
+        totals: %{
+          trials: total_trials,
+          running: total_running,
+          pruned: total_pruned,
+          completed: total_completed
+        }
+      }}
     else
       _ -> {:error, :not_found}
     end

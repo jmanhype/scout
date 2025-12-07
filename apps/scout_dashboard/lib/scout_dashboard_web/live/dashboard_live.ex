@@ -21,9 +21,16 @@ defmodule ScoutDashboardWeb.DashboardLive do
   @impl true
   def handle_info(:tick, socket) do
     study_id = socket.assigns.study_id
-    status = ScoutClient.status(study_id)
+
+    status = case ScoutClient.status(study_id) do
+      {:ok, s} -> s
+      {:error, _} -> %{brackets: %{}, totals: %{}}
+    end
+
+    # best/1 returns a map directly (not {:ok, map})
     best = ScoutClient.best(study_id)
-    history = Enum.take([best | socket.assigns.history], 120)
+
+    history = if best && best.score, do: Enum.take([best | socket.assigns.history], 120), else: socket.assigns.history
     {:noreply, assign(socket, status: status, best: best, history: history)}
   end
 
