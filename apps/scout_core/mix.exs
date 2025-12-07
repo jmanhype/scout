@@ -58,10 +58,10 @@ defmodule ScoutCore.MixProject do
     [
       main: "readme",
       extras: [
-        "../../README.md": [title: "Overview", filename: "readme"],
-        "../../GETTING_STARTED.md": [title: "Getting Started"],
-        "../../API_GUIDE.md": [title: "API Guide"],
-        "../../BENCHMARK_RESULTS.md": [title: "Benchmarks"]
+        "README.md": [title: "Overview", filename: "readme"],
+        "GETTING_STARTED.md": [title: "Getting Started"],
+        "API_GUIDE.md": [title: "API Guide"],
+        "BENCHMARK_RESULTS.md": [title: "Benchmarks"]
       ],
       groups_for_extras: [
         "Guides": ~r/GETTING_STARTED|API_GUIDE/,
