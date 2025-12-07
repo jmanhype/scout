@@ -7,10 +7,15 @@ defmodule Scout.Integration.EndToEndTest do
   setup do
     # Configure ETS adapter for integration tests
     Application.put_env(:scout_core, :store_adapter, Scout.Store.ETS)
-    {:ok, pid} = Scout.Store.ETS.start_link([])
+    # Start or use existing Scout.Store.ETS process
+    {pid, started_by_test?} = case Scout.Store.ETS.start_link([]) do
+      {:ok, pid} -> {pid, true}
+      {:error, {:already_started, pid}} -> {pid, false}
+    end
 
     on_exit(fn ->
-      if Process.alive?(pid) do
+      # Only stop if we started it
+      if started_by_test? and Process.alive?(pid) do
         GenServer.stop(pid, :normal, 1000)
       end
     end)
