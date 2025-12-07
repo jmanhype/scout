@@ -22,20 +22,41 @@ defmodule Scout.Sampler.Bandit do
           {key, _} = bucket_key(params, state.bins)
           %{n: n, mean: mean} = Map.get(stats, key, %{n: 0, mean: 0.0})
           n = max(n, 1)
-          mean + c * :math.sqrt(:math.log(total) / n)
+          # UCB1 formula: mean + c * sqrt(log(total) / n)
+          # Ensure mean is a valid number, default to 0.0
+          safe_mean = if is_number(mean) and is_finite(mean), do: mean, else: 0.0
+          exploration = c * :math.sqrt(:math.log(total) / n)
+          safe_mean + exploration
         end)
       end
     {pick, state}
   end
 
   defp bucket_stats(history, bins) do
-    Enum.reduce(history, %{}, fn %{params: params, score: score}, acc ->
-      {key, _} = bucket_key(params, bins)
-      Map.update(acc, key, %{n: 1, mean: score}, fn %{n: n, mean: m} ->
-        n2 = n + 1; %{n: n2, mean: m + (score - m) / n2}
-      end)
+    Enum.reduce(history, %{}, fn trial, acc ->
+      # Skip trials without valid scores
+      score = Map.get(trial, :score)
+      params = Map.get(trial, :params)
+
+      cond do
+        not is_map(params) -> acc
+        not is_number(score) -> acc
+        not is_finite(score) -> acc
+        true ->
+          {key, _} = bucket_key(params, bins)
+          Map.update(acc, key, %{n: 1, mean: score}, fn %{n: n, mean: m} ->
+            n2 = n + 1
+            new_mean = m + (score - m) / n2
+            %{n: n2, mean: if(is_finite(new_mean), do: new_mean, else: m)}
+          end)
+      end
     end)
   end
+
+  defp is_finite(x) when is_number(x) do
+    x == x and x != :pos_infinity and x != :neg_infinity
+  end
+  defp is_finite(_), do: false
 
   defp bucket_key(params, bins) do
     keys = params |> Map.keys() |> Enum.sort()

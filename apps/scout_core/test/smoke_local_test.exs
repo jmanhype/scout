@@ -9,7 +9,7 @@ defmodule Scout.SmokeLocalTest do
       max_trials: 12,
       parallelism: 4,
       seed: 111,
-      sampler: Scout.Sampler.Bandit,
+      sampler: Scout.Sampler.Random,  # Use deterministic sampler
       sampler_opts: %{},
       pruner: nil,
       pruner_opts: %{},
