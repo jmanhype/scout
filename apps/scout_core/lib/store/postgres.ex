@@ -11,7 +11,23 @@ defmodule Scout.Store.Postgres do
   import Ecto.Query
   
   @behaviour Scout.Store.Adapter
-  
+
+  @doc """
+  Returns no-op child spec since Scout.Repo handles supervision.
+  """
+  def child_spec(_arg) do
+    # Postgres adapter doesn't need its own supervision
+    # Scout.Repo is already supervised by the application
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [[]]},
+      type: :supervisor
+    }
+  end
+
+  @doc false
+  def start_link(_opts), do: :ignore
+
   # Study operations
   
   @impl true

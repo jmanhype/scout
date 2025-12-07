@@ -1,9 +1,8 @@
 # Purpose: one spec to run against both ETS and Postgres adapters
 defmodule Scout.AdapterSpec do
-  use ExUnit.Case, async: true
-
   defmacro __using__(adapter: adapter) do
     quote bind_quoted: [adapter: adapter] do
+      use ExUnit.Case, async: true
       @adapter adapter
 
       test "idempotent put_study/1" do

@@ -173,7 +173,7 @@ defmodule Scout.Math.KDETest do
   describe "exp_density/1" do
     test "converts log densities safely" do
       assert KDE.exp_density(0.0) == 1.0
-      assert KDE.exp_density(-1.0) ≈ 0.3678794 within 0.0001
+      assert_in_delta KDE.exp_density(-1.0), 0.3678794, 0.0001
       
       # Very negative log-density should return epsilon
       assert KDE.exp_density(-100.0) == 1.0e-12
