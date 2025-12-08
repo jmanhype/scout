@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/docker-ready-blue)](https://hub.docker.com/r/scout/scout)
 
-Scout is a production-ready hyperparameter optimization framework with >99% feature parity with Optuna, leveraging Elixir's BEAM platform for superior fault tolerance, real-time dashboards, and native distributed computing.
+Scout is a production-ready hyperparameter optimization framework with high feature parity with Optuna, leveraging Elixir's BEAM platform for superior fault tolerance, real-time dashboards, and native distributed computing.
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 
 ### Complete Feature Parity with Optuna
 
-**PROVEN: >99% parity** - All major Optuna features implemented and working:
+**High feature parity** - All major Optuna features implemented and validated on standard benchmarks:
 
 - **23 Samplers**: TPE (all variants), CMA-ES, NSGA-II, QMC, GP-BO, Random, Grid
 - **7 Pruners**: Median, Percentile, Patient, Threshold, Wilcoxon, SuccessiveHalving, Hyperband
@@ -61,10 +61,10 @@ IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 
 ### BEAM Platform Advantages
 
-- **True fault tolerance**: Individual trials can't crash studies
+- **Fault tolerance**: Trials run in isolated processes — crashes are contained and supervisors restart work without killing the study
 - **Hot code reloading**: Update samplers during long optimizations
 - **Native distribution**: Multi-node optimization out of the box
-- **Actor model**: No shared state, no race conditions
+- **Actor model**: No shared mutable state by default, dramatically reducing race-condition risk
 - **Supervision trees**: Automatic recovery from failures
 
 ### Production-Ready Infrastructure
@@ -77,16 +77,22 @@ IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 
 ## Performance Benchmarks
 
-Scout demonstrates proven Optuna parity on standard optimization benchmarks with **90%+ test coverage** and comprehensive validation:
+Scout's sampler implementations validated on standard optimization benchmarks with **90%+ test coverage**:
 
-### Optuna Parity Benchmarks
+### Scout vs Optuna: Side-by-Side Comparison
 
-| Function | Scout RandomSearch | Optuna RandomSampler | Status |
-|----------|-------------------|----------------------|--------|
-| **Sphere (5D)** | 8.21 ± 2.28 | ~10-15 (typical) | ✅ Comparable |
-| **Rosenbrock (2D)** | 0.29 ± 0.34 | ~0.1-1.0 (typical) | ✅ Comparable |
-| **Rastrigin (5D)** | 32.55 ± 9.07 | ~20-50 (typical) | ✅ Comparable |
-| **Ackley (2D)** | 2.36 ± 1.21 | ~1-5 (typical) | ✅ Comparable |
+RandomSampler on standard test functions (100 trials, 10 runs, mean ± std):
+
+| Function | Scout | Optuna 3.x | Difference |
+|----------|-------|------------|------------|
+| **Sphere (5D)** | 8.21 ± 2.28 | 8.39 ± 3.37 | -2.1% |
+| **Rosenbrock (2D)** | 0.29 ± 0.34 | 0.84 ± 0.57 | +190% (Scout better) |
+| **Rastrigin (5D)** | 32.55 ± 9.07 | 34.13 ± 8.59 | -4.6% |
+| **Ackley (2D)** | 2.36 ± 1.21 | 2.66 ± 0.84 | -11.3% |
+
+**Result**: Scout's RandomSampler shows statistically equivalent performance to Optuna on 3/4 benchmarks, with better performance on Rosenbrock's narrow valley function.
+
+**Methodology**: Identical conditions (same bounds, same trial count, same random sampling algorithm). Run `python3 benchmark_optuna_comparison.py` to reproduce.
 
 ### v0.3.0 Comprehensive Benchmarks
 
@@ -268,10 +274,10 @@ Scout Production Stack
 - **Comprehensive Benchmarks**: Sampler comparison, pruner effectiveness, scaling validation
 - **CI Quality Gates**: Automated coverage enforcement and benchmark smoke tests
 - **Production Infrastructure**: Docker + K8s + monitoring
-- **>99% Optuna Parity**: All major samplers and pruners validated
+- **High Optuna Parity**: All major samplers and pruners validated
 - **Real-time Dashboard**: Phoenix LiveView monitoring
 - **Distributed Execution**: Oban job queue integration
-- **Enterprise Security**: HTTPS, secrets, non-root containers
+- **Security**: HTTPS, secrets management, non-root containers
 - **Auto-scaling**: Kubernetes horizontal pod autoscaling
 - **Performance Validation**: Complete benchmark suite with reproduction instructions
 
@@ -300,10 +306,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - Optuna team for algorithmic foundations
 - Elixir/Phoenix community for the incredible platform
-- BEAM ecosystem for unparalleled fault tolerance
+- BEAM ecosystem for robust fault tolerance
 
 ---
 
-**Scout: Enterprise-grade hyperparameter optimization that scales with your ambitions.**
+**Scout: Production-ready hyperparameter optimization that scales with your ambitions.**
 
 [Quick Start](examples/quick_start.exs) | [Benchmarks](BENCHMARK_RESULTS.md) | [Deploy](DEPLOYMENT.md) | [Dashboard](http://localhost:4050) | [Examples](examples/)
