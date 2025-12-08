@@ -4,7 +4,7 @@ defmodule ScoutCore.MixProject do
   def project do
     [
       app: :scout_core,  # Directory name must match in umbrella
-      version: "0.3.1",
+      version: "0.3.2",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -36,7 +36,7 @@ defmodule ScoutCore.MixProject do
 
   defp description do
     """
-    Production-ready hyperparameter optimization for Elixir with >99% Optuna parity.
+    Production-ready hyperparameter optimization for Elixir with high Optuna parity.
     Leverages BEAM fault tolerance, real-time dashboards, and native distributed computing.
     """
   end
@@ -67,7 +67,7 @@ defmodule ScoutCore.MixProject do
         "Guides": ~r/GETTING_STARTED|API_GUIDE/,
         "Reference": ~r/BENCHMARK/
       ],
-      source_ref: "v0.3.1",
+      source_ref: "v0.3.2",
       source_url: "https://github.com/jmanhype/scout"
     ]
   end

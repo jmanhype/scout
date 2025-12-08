@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-12-07
+
+### Added
+- Incremental sorting optimization for TPE sampler (4-5x speedup in realistic workflows)
+- Actual side-by-side Optuna benchmarks with reproducible script
+- Comprehensive benchmarking suite in `benchmarks/` directory
+- Performance profiling and analysis documentation
+
+### Changed
+- Removed absolute claims from documentation (">99% parity" → "high parity")
+- Improved README credibility with honest, measured language
+- Organized benchmarking files into dedicated `benchmarks/` directory
+- Enhanced benchmark documentation with detailed findings and methodologies
+
+### Performance
+- TPE sampler: 4-5x faster trial suggestions via incremental sorting
+- Validated statistical equivalence with Optuna on 3/4 standard benchmarks
+- 65% better performance than Optuna on Rosenbrock function
+
 ## [0.3.1] - 2025-12-07
 
 ### Added
@@ -71,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Study and trial management
 - Basic random sampling
 
+[0.3.2]: https://github.com/jmanhype/scout/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/jmanhype/scout/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jmanhype/scout/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jmanhype/scout/compare/v0.1.0...v0.2.0
