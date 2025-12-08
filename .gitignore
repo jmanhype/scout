@@ -7,6 +7,10 @@
 *.csv
 erl_crash.dump
 
+# Generated docs and coverage reports
+/apps/*/cover
+/apps/*/doc
+
 # Temporary test files (examples/ is for permanent examples)
 /test_*.exs
 *_STATUS.md
