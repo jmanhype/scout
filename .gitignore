@@ -5,8 +5,15 @@
 
 # Generated files
 *.csv
-*.json
 erl_crash.dump
+
+# Temporary test files (examples/ is for permanent examples)
+/test_*.exs
+*_STATUS.md
+
+# Archives and old code
+/archive
+/benchmark
 
 # Temporary files
 .DS_Store
