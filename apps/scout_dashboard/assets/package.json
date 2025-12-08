@@ -1,0 +1,22 @@
+{
+  "name": "scout_dashboard",
+  "version": "1.0.0",
+  "description": "Scout LiveView Dashboard Assets",
+  "repository": {},
+  "license": "MIT",
+  "scripts": {
+    "deploy": "NODE_ENV=production tailwindcss --postcss --minify --input=css/app.css --output=../priv/static/assets/app.css && NODE_ENV=production esbuild js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --minify"
+  },
+  "dependencies": {
+    "phoenix": "file:../../../deps/phoenix",
+    "phoenix_html": "file:../../../deps/phoenix_html",
+    "phoenix_live_view": "file:../../../deps/phoenix_live_view"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "autoprefixer": "^10.4.16",
+    "esbuild": "^0.19.5",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5"
+  }
+}

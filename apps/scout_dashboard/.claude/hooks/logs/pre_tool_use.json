@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2025-12-07T08:38:24.175037",
+    "tool_name": "",
+    "tool_input": {},
+    "blocked": false,
+    "reason": "approved",
+    "input_data": {}
+  },
+  {
+    "timestamp": "2025-12-07T08:38:36.292580",
+    "tool_name": "",
+    "tool_input": {},
+    "blocked": false,
+    "reason": "approved",
+    "input_data": {}
+  }
+]
