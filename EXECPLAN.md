@@ -1,6 +1,7 @@
-# Achieve Optuna-Parity TPE Benchmark
+# Optuna Parity Across Core Samplers/Pruners
 
 This ExecPlan is a living document and must be maintained in accordance with .agent/PLANS.md. The goal is to bring Scout’s TPE parity benchmark (scripts/parity_optuna_vs_scout.exs) into 1:1 performance with Optuna on the 2D sphere benchmark by aligning algorithmic details and validation.
+This revision expands the scope: establish Optuna-parity “recipes” and validation harnesses for additional core samplers/pruners (CMA-ES, NSGA-II, MOTPE, QMC, pruners) so users can confidently verify correctness across the surface area.
 
 ## Purpose / Big Picture
 
@@ -8,10 +9,15 @@ After this work, running `python3 scripts/parity_optuna_vs_scout.exs` from repo 
 
 ## Progress
 
-- [x] (2025-12-08 23:20Z) Baseline parity script added; current gap: Scout best ≈1.64 vs Optuna ≈0.0019 (200 trials, seed 123).
+- [x] (2025-12-08 23:20Z) Baseline TPE parity script added; current gap: Scout best ≈1.64 vs Optuna ≈0.0019 (200 trials, seed 123).
 - [x] (2025-12-09 23:30Z) Implemented Optuna-aligned independent TPE (log handling, Scott bandwidth, gamma=min(0.25,sqrt(n)/n), prior-smoothing pdf); wired parity script to use it.
-- [x] (2025-12-09 23:57Z) Parity run: Scout best ≈0.001384 vs Optuna ≈0.001917 (200 trials, seed 123) — Scout edges out Optuna on sphere.
-- [x] (2025-12-10 00:04Z) `mix test` now passes (postgres excluded); stabilized CMA-ES to avoid MatchErrors; restored TPE defaults expected by tests.
+- [x] (2025-12-09 23:57Z) TPE parity run: Scout best ≈0.001384 vs Optuna ≈0.001917 (200 trials, seed 123) — Scout edges out Optuna on sphere.
+- [x] (2025-12-10 00:04Z) `mix test` passes (postgres excluded); stabilized CMA-ES to avoid MatchErrors; restored TPE defaults expected by tests.
+- [ ] Add parity harness for CMA-ES vs Optuna on sphere/rosenbrock (seeds set, 200 trials).
+- [ ] Add parity harness for NSGA-II/MOTPE on 2-objective test (e.g., ZDT1) vs Optuna.
+- [ ] Add parity harness for QMC (Halton/Sobol) sampling vs Optuna/scipy.stats.qmc.
+- [ ] Add pruner parity harness (Median/Percentile/SHA/Hyperband/Wilcoxon) vs Optuna behavior.
+- [ ] Document “Optuna parity mode” recipes per sampler/pruner in README/examples.
 
 ## Surprises & Discoveries
 
@@ -19,6 +25,8 @@ After this work, running `python3 scripts/parity_optuna_vs_scout.exs` from repo 
 - Prior KDE mixing helps stability but not enough; closer alignment to Optuna’s independent TPE is likely needed.
 - Adding a tiny uniform prior into the KDE pdf reduced degeneracy but parity is still off (best ≈0.50 vs Optuna ≈0.0019).
 - Lowering bandwidth (0.5 * Scott) plus 10% random candidates and gamma=min(0.25, sqrt(n)/n) produced parity without needing copulas.
+- CMA-ES placeholder eigen handling caused MatchErrors; defensive fallbacks fixed tests but true parity needs proper eigendecomposition and state updates.
+- NSGA-II/MOTPE and QMC parity not yet validated; need seedable cross-language harnesses.
 
 ## Decision Log
 
@@ -28,11 +36,13 @@ After this work, running `python3 scripts/parity_optuna_vs_scout.exs` from repo 
 - Decision: Add a 10% random candidate mix and shrink bandwidth by 0.5× Scott to match Optuna’s exploration/exploitation balance.  
   Rationale: Prevents mode collapse and improved best scores to beat Optuna on sphere.  
   Date/Author: 2025-12-09 / Codex
+- Decision: Expand parity scope to CMA-ES, NSGA-II/MOTPE, QMC, and pruners with dedicated harnesses mirroring Optuna’s defaults.  
+  Rationale: Users want assurance that Scout matches Optuna across all major samplers/pruners, not only TPE.  
+  Date/Author: 2025-12-10 / Codex
 
 ## Outcomes & Retrospective
 
-Parity on the 2D sphere benchmark is achieved: Scout best 0.001384 vs Optuna 0.001917 (seed 123, 200 trials) using `Scout.Sampler.TPEOptuna`. Next work: run `mix test` and reconcile outstanding test failures (CMA-ES shape, TPE bandwidth expectation, MOTPE bounds) before shipping.
-All Elixir tests (excluding postgres) now pass after adding defensive CMA-ES updates and aligning TPE defaults to test expectations. Parity script remains green.
+Parity on the 2D sphere benchmark is achieved: Scout best 0.001384 vs Optuna 0.001917 (seed 123, 200 trials) using `Scout.Sampler.TPEOptuna`. All Elixir tests (excluding postgres) now pass. Outstanding: extend parity to CMA-ES, NSGA-II/MOTPE, QMC, and pruners with harnesses and align defaults as needed.
 
 ## Context and Orientation
 
@@ -44,47 +54,74 @@ All Elixir tests (excluding postgres) now pass after adding defensive CMA-ES upd
 
 ## Plan of Work
 
-1) Add an Optuna-aligned independent TPE module (e.g., `Scout.Sampler.TPEOptuna`) that:
-   - Uses independent per-parameter KDEs with Scott bandwidth (1.06 * sigma * n^(-1/5)), floor epsilon.
-   - Uses gamma = min(0.1, 1/√n) for good/bad split.
-   - Uses n_candidates = 64, min_obs = 10 (matching Optuna defaults).
-   - Handles log-uniform by sampling in log space; handles int by rounding.
-   - No copula, no priors beyond a small padding on range.
-2) Export it through the sampler behaviour (init/next) without touching existing TPE.
-3) Update `scripts/parity_optuna_vs_scout.exs` to select this Optuna-aligned sampler and set a matching config (gamma schedule, n_candidates, min_obs).
-4) Run `mix test` and `python3 scripts/parity_optuna_vs_scout.exs`; record results.
-5) If still off, adjust only the new sampler’s bandwidth floor or candidate count until near parity (<5% gap). (Completed: bandwidth 0.5× Scott, bw_floor 1e-3, gamma=min(0.25, sqrt(n)/n), ~10% random mix, 1% uniform prior.)
+TPE (done)
+- Optuna-aligned independent TPE (`apps/scout_core/lib/sampler/tpe_optuna.ex`) with Scott bandwidth floor, gamma=min(0.25, sqrt(n)/n), random-mix, prior smoothing. Parity script uses it.
+
+CMA-ES parity
+- Add a mixed-language parity harness (Elixir + Python Optuna) for CMA-ES on sphere/rosenbrock (200 trials, seeds). Use EXLA/NumPy parity via Python for Optuna baseline.
+- Replace placeholder eigendecomposition with a stable implementation (or reuse Nx.LinAlg.eigh if feasible for symmetric covariance); ensure cached B/D are updated; guard shapes/NaNs.
+- Align defaults (population size, weights, sigma0) to Optuna’s CmaEsSampler; expose a “parity preset”.
+
+NSGA-II / MOTPE parity
+- Add parity harness for a 2-objective benchmark (e.g., ZDT1 or a simple (f1=x^2, f2=(y-1)^2) with bounds). Compare hypervolume or dominated set quality vs Optuna’s NSGA-II/MOTPE.
+- Verify crowding-distance, nondominated sorting, and sampling defaults align with Optuna’s.
+
+QMC parity
+- Add harness to compare first N Halton/Sobol points vs scipy.stats.qmc with fixed `scramble=False/True` to match Optuna settings. Ensure skip/seed alignment.
+
+Pruner parity
+- Add harness comparing prune decisions (Median, Percentile, SHA/Hyperband, Wilcoxon) vs Optuna on synthetic learning curves; fixed seeds and rung configs.
+
+Docs / DX
+- Add README “Optuna parity mode” section listing exact commands for each harness (TPE, CMA-ES, NSGA-II/MOTPE, QMC, pruners) and the sampler/pruner presets to use.
+- Keep `scripts/parity_optuna_vs_scout.exs` as TPE parity; add new scripts `scripts/parity_cmaes_vs_optuna.exs`, `scripts/parity_nsga2_vs_optuna.exs`, `scripts/parity_qmc_vs_optuna.exs`, `scripts/parity_pruners_vs_optuna.exs`.
 
 ## Concrete Steps
 
 - Working dir: repo root.
-- Implement new sampler in `apps/scout_core/lib/sampler/tpe_optuna.ex`.
-- Wire alias in parity script: use `Scout.Sampler.TPEOptuna` with target opts.
-- Commands to run during validation:
-  - `mix test`
-  - `python3 scripts/parity_optuna_vs_scout.exs`
+- TPE parity (done): `python3 scripts/parity_optuna_vs_scout.exs`
+- Add CMA-ES parity script (Python Optuna baseline + Elixir CMA-ES). Command: `python3 scripts/parity_cmaes_vs_optuna.exs`
+- Add NSGA-II/MOTPE parity script. Command: `python3 scripts/parity_nsga2_vs_optuna.exs`
+- Add QMC parity script. Command: `python3 scripts/parity_qmc_vs_optuna.exs`
+- Add pruner parity script. Command: `python3 scripts/parity_pruners_vs_optuna.exs`
+- Update README parity section with these commands.
+- Run `mix test` after changes.
 
 ## Validation and Acceptance
 
-- Acceptance: `python3 scripts/parity_optuna_vs_scout.exs` reports Scout best_score within ~5% of Optuna best_value on the 2D sphere benchmark (seed 123, 200 trials). Example target: Optuna ≈0.002, Scout ≤0.0021.
+- TPE: `python3 scripts/parity_optuna_vs_scout.exs` => Scout best_score within ~5% of Optuna best_value on sphere (seed 123, 200 trials).
+- CMA-ES: `python3 scripts/parity_cmaes_vs_optuna.exs` => best scores within ~5–10% on sphere/rosenbrock across seeds {123,456,789}.
+- NSGA-II/MOTPE: `python3 scripts/parity_nsga2_vs_optuna.exs` => hypervolume/dominance metrics within ~5–10% across seeds.
+- QMC: `python3 scripts/parity_qmc_vs_optuna.exs` => first N points match Optuna/scipy.stats.qmc (exact match or tiny numerical tolerance).
+- Pruners: `python3 scripts/parity_pruners_vs_optuna.exs` => prune/keep decisions match Optuna on synthetic curves (per rung config).
 - All existing tests (`mix test`, postgres excluded) pass.
 
 ## Idempotence and Recovery
 
-- Changes are additive (new sampler module). Parity script change is reversible by switching sampler back.
-- If parity still fails, adjust only the new sampler’s constants (gamma, bandwidth floor) and rerun; no data migrations needed.
+- Parity scripts are additive; rerunnable with fixed seeds. Safe to repeat.
+- If a harness diverges, adjust sampler/pruner presets locally in the scripts; no migrations needed.
 
 ## Artifacts and Notes
 
-- Final parity run (`python3 scripts/parity_optuna_vs_scout.exs`, repo root):
+- TPE parity run (`python3 scripts/parity_optuna_vs_scout.exs`, repo root):
   Optuna best: 0.0019171354 @ x=-0.01010, y=-0.04260  
   Scout best: 0.0013836779 @ x=0.02024, y=-0.03121  
   Winner: Scout
+- Pending: add artifacts for CMA-ES/NSGA-II/QMC/pruner parity runs once scripts exist.
 
 ## Interfaces and Dependencies
 
-- New module: `apps/scout_core/lib/sampler/tpe_optuna.ex` implementing `init/1` and `next/4` per `Scout.Sampler` behaviour.
-- Parity script uses `Scout.Executor.Iterative` with `sampler: Scout.Sampler.TPEOptuna`.
+- Optuna-style sampler: `apps/scout_core/lib/sampler/tpe_optuna.ex` implementing `init/1` and `next/4` per `Scout.Sampler`.
+- Parity scripts use `Scout.Executor.Iterative` with sampler/pruner presets:
+  - TPE: `Scout.Sampler.TPEOptuna`
+  - CMA-ES: `Scout.Sampler.CmaEs` with parity presets
+  - NSGA-II/MOTPE: existing modules with parity presets
+  - QMC: `Scout.Sampler.QMC`
+  - Pruners: `Scout.Pruner.*` with Optuna-aligned thresholds
+- External: Python Optuna (already used in `scripts/parity_optuna_vs_scout.exs`) plus scipy.stats.qmc for QMC parity.
+
+---
+Note (2025-12-10): Expanded scope to multi-sampler/pruner parity; new harness scripts and algorithm alignments still needed.***
 
 ---
 Note (2025-12-09): Updated with parity settings and final run results; pending test sweep.***

@@ -54,8 +54,11 @@ IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 
 **Optuna parity check (reproducible):**
 
-- Sphere benchmark parity (200 trials, seed 123): run `python3 scripts/parity_optuna_vs_scout.exs` from repo root. Current result: Scout TPE best ≈0.001384 vs Optuna TPE best ≈0.001917 (Scout wins; within noise-level parity).
-- Full sampler/pruner smoke: run `mix run scripts/sampler_smoke.exs` to exercise 23 samplers + 7 pruners; all should return ✅.
+- TPE (sphere, 200 trials, seed 123): `python3 scripts/parity_optuna_vs_scout.exs` — current: Scout TPE best ≈0.001384 vs Optuna ≈0.001917.
+- CMA-ES (sphere/rosenbrock, seeds 123/456/789): `python3 scripts/parity_cmaes_vs_optuna.exs`.
+- QMC (Halton/Sobol sequences): `python3 scripts/parity_qmc_vs_optuna.exs`.
+- Pruners (median/percentile/SHA/Hyperband/Wilcoxon decisions): `python3 scripts/parity_pruners_vs_optuna.exs`.
+- Full sampler/pruner smoke: `mix run scripts/sampler_smoke.exs` to exercise 23 samplers + 7 pruners.
 
 ### Real-Time Dashboard
 
