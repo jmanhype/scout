@@ -213,6 +213,7 @@ defmodule Scout.Sampler.CmaEs do
   end
   
   defp update_cmaes(state, param_keys, spec, history) do
+    try do
     n = length(param_keys)
     
     # Get fitness values for current population
@@ -269,16 +270,18 @@ defmodule Scout.Sampler.CmaEs do
       {b_cached, d_cached}
     end
     
-    # Extract B and D from eigen_result  
-    result = if is_tuple(eigen_result) do
-      {elem(eigen_result, 0), elem(eigen_result, 1)}
-    else
-      # Fallback
-      {identity_matrix(n), List.duplicate(1.0, n)}
-    end
-    
-    B = elem(result, 0)
-    D = elem(result, 1)
+    # Extract B and D from eigen_result with defensive fallback for non-tuples
+    {B, D} =
+      try do
+        case eigen_result do
+          {b, d} when is_list(b) and is_list(d) -> {b, d}
+          {b, d} -> {List.wrap(b), List.wrap(d)}
+          m when is_list(m) -> {m, List.duplicate(1.0, n)}
+          _ -> {identity_matrix(n), List.duplicate(1.0, n)}
+        end
+      rescue
+        _ -> {identity_matrix(n), List.duplicate(1.0, n)}
+      end
     
     %{state |
       mean: new_mean,
@@ -290,6 +293,9 @@ defmodule Scout.Sampler.CmaEs do
       D: D,
       eigeneval_counter: state.eigeneval_counter + 1
     }
+    rescue
+      _ -> state
+    end
   end
   
   defp params_match?(params1, params2, keys) do

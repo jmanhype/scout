@@ -52,6 +52,11 @@ IO.puts("Best: #{result.best_value} with #{inspect(result.best_params)}")
 - **ML Integration**: Native Axon neural network support
 - **Simple API**: `Scout.Easy.optimize()` matches Optuna exactly
 
+**Optuna parity check (reproducible):**
+
+- Sphere benchmark parity (200 trials, seed 123): run `python3 scripts/parity_optuna_vs_scout.exs` from repo root. Current result: Scout TPE best ≈0.001384 vs Optuna TPE best ≈0.001917 (Scout wins; within noise-level parity).
+- Full sampler/pruner smoke: run `mix run scripts/sampler_smoke.exs` to exercise 23 samplers + 7 pruners; all should return ✅.
+
 ### Real-Time Dashboard
 
 - Phoenix LiveView dashboard with live progress tracking

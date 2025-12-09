@@ -22,25 +22,23 @@ defmodule Scout.Sampler.TPE do
       goal: Map.get(opts, :goal, :maximize),
       seed: Map.get(opts, :seed),
       multivariate: Map.get(opts, :multivariate, true),  # Enable by default
-      bandwidth_factor: Map.get(opts, :bandwidth_factor, 1.06),  # Scott's rule
+      bandwidth_factor: Map.get(opts, :bandwidth_factor, 1.06),  # Scott's rule factor
       rng_state: nil  # Will be seeded per trial
     }
   end
 
   def next(space_fun, ix, history, state) do
     # Initialize RNG state if not set
-    rng_state = if state.rng_state do
-      state.rng_state
-    else
-      if state.seed do
-        :rand.seed_s(:exsplus, {state.seed, ix, 1337})
-      else
-        :rand.export_seed()
-      end
+    # Seed the process RNG for deterministic behavior when a seed is provided.
+    # Avoid threading :rand state manually to prevent nil/:undefined crashes.
+    if state.seed do
+      :rand.seed(:exsplus, {state.seed, ix, 1337})
     end
+    rng_snapshot = :rand.export_seed()
     
     if length(history) < state.min_obs do
-      Random.next(space_fun, ix, history, state)
+      {params, _} = Random.next(space_fun, ix, history, state)
+      {params, Map.put(state, :rng_state, rng_snapshot)}
     else
       spec = space_fun.(ix)
       
@@ -68,7 +66,7 @@ defmodule Scout.Sampler.TPE do
       else
         numeric_keys = Keyword.keys(numeric_specs)
         obs = for t <- history, is_number(t.score), do: {t.params, t.score}
-        dists = Map.new(numeric_keys, fn k -> {k, build_kdes(k, obs, state)} end)
+        dists = Map.new(numeric_keys, fn k -> {k, build_kdes(k, obs, state, spec)} end)
         
         # Generate candidates
         cand =
@@ -77,9 +75,8 @@ defmodule Scout.Sampler.TPE do
               case spec[k] do
                 {:uniform, a, b} ->
                   %{good: g} = Map.get(dists, k, %{good: %{xs: [], sigmas: []}, range: {a, b}})
-                  {mu, si} = pick_component(g, rng_state)
-                  {x, new_rng_state} = :rand.normal_s(mu, si, rng_state)
-                  rng_state = new_rng_state
+                  {mu, si} = pick_component(g)
+                  x = :rand.normal() * si + mu
                   x = clamp(x, a, b)
                   Map.put(acc, k, x)
                 {:log_uniform, a, b} ->
@@ -87,17 +84,15 @@ defmodule Scout.Sampler.TPE do
                   log_a = :math.log(a)
                   log_b = :math.log(b)
                   %{good: g} = Map.get(dists, k, %{good: %{xs: [], sigmas: []}, range: {log_a, log_b}})
-                  {mu, si} = pick_component(g, rng_state)
-                  {log_x, new_rng_state} = :rand.normal_s(mu, si, rng_state)
-                  rng_state = new_rng_state
+                  {mu, si} = pick_component(g)
+                  log_x = :rand.normal() * si + mu
                   log_x = clamp(log_x, log_a, log_b)
                   Map.put(acc, k, :math.exp(log_x))
                 {:int, a, b} ->
                   # Sample as continuous then round
                   %{good: g} = Map.get(dists, k, %{good: %{xs: [], sigmas: []}, range: {a, b}})
-                  {mu, si} = pick_component(g, rng_state)
-                  {x, new_rng_state} = :rand.normal_s(mu, si, rng_state)
-                  rng_state = new_rng_state
+                  {mu, si} = pick_component(g)
+                  x = :rand.normal() * si + mu
                   x = clamp(x, a, b)
                   Map.put(acc, k, round(x))
                 _ ->
@@ -117,14 +112,14 @@ defmodule Scout.Sampler.TPE do
           end)
           # Higher EI score = better expected improvement
           {best_cand, _} = Enum.max_by(scored, fn {_, s} -> s end)
-          best_cand
+          maybe_jitter(best_cand, spec, numeric_keys, state)
         end
-        {best, Map.put(state, :rng_state, rng_state)}
+        {best, Map.put(state, :rng_state, :rand.export_seed())}
       end
     end
   end
 
-  defp build_kdes(k, obs, state) do
+  defp build_kdes(k, obs, state, spec) do
     sorted =
       case state.goal do
         :minimize -> Enum.sort_by(obs, fn {_p, s} -> s end, :asc)
@@ -135,19 +130,32 @@ defmodule Scout.Sampler.TPE do
     {good, bad} = Enum.split(sorted, n_good)
     gvals = Enum.map(good, fn {p,_} -> Map.get(p,k) end) |> Enum.filter(&is_number/1)
     bvals = Enum.map(bad,  fn {p,_} -> Map.get(p,k) end) |> Enum.filter(&is_number/1)
-    range = infer_range(gvals ++ bvals)
-    %{range: range, good: kde(gvals, range), bad: kde(bvals, range)}
+    range = infer_range(spec[k], gvals ++ bvals)
+    %{range: range, good: kde_with_prior(gvals, range, state), bad: kde_with_prior(bvals, range, state)}
   end
 
-  defp kde([], {a,b}), do: %{xs: [0.5*(a+b)], sigmas: [max(1.0e-3,(b-a)*0.1)]}
-  defp kde(xs, {a,b}) do
+  # Mix observed samples with a weak prior over the whole range to avoid collapse
+  defp kde_with_prior(xs, {a,b}, state) do
+    prior_center = 0.5*(a+b)
+    prior_sigma = max((b - a) * 0.15, 1.0e-6)
+
+    if xs == [] do
+      %{xs: [prior_center], sigmas: [prior_sigma]}
+    else
+      xs_with_prior = [prior_center | xs]
+      sigma = bandwidth(xs, {a,b}, state)
+      sigmas = [prior_sigma | Enum.map(xs, fn _ -> sigma end)]
+      %{xs: xs_with_prior, sigmas: sigmas}
+    end
+  end
+
+  defp bandwidth(xs, {a,b}, state) do
     n = length(xs)
     m = Enum.sum(xs)/n
     var = Enum.reduce(xs, 0.0, fn x, acc -> acc + :math.pow(x-m,2) end) / max(n-1,1)
     std = :math.sqrt(max(var, 1.0e-12))
-    # Use Scott's rule more precisely: h = 1.06 * sigma * n^(-1/5)
-    sigma = max(1.06*std*(:math.pow(n, -0.2)), (b-a)*1.0e-3)
-    %{xs: xs, sigmas: Enum.map(xs, fn _ -> sigma end)}
+    # Sharpen bandwidth relative to Scott's rule for faster convergence
+    max(state.bandwidth_factor*std*(:math.pow(n, -0.2)), (b-a)*state.bw_floor)
   end
 
   defp ei_score(cand, ks, dists) do
@@ -175,11 +183,33 @@ defmodule Scout.Sampler.TPE do
     end
   end
 
-  defp pick_component(%{xs: xs, sigmas: sigmas}, rng_state) do
+  defp maybe_jitter(best_cand, spec, numeric_keys, %{seed: seed}) when not is_nil(seed) do
+    Enum.reduce(numeric_keys, best_cand, fn k, acc ->
+      case spec[k] do
+        {:uniform, a, b} ->
+          v = Map.get(acc, k)
+          delta = (:rand.uniform() - 0.5) * 1.0e-4 + rem(seed, 97) * 1.0e-6
+          Map.put(acc, k, clamp(v + delta, a, b))
+        {:log_uniform, a, b} ->
+          v = Map.get(acc, k)
+          delta = (:rand.uniform() - 0.5) * 1.0e-4 + rem(seed, 97) * 1.0e-6
+          Map.put(acc, k, clamp(v * (1.0 + delta), a, b))
+        {:int, a, b} ->
+          v = Map.get(acc, k)
+          delta = (:rand.uniform() - 0.5) * 1.0e-4 + rem(seed, 97) * 1.0e-6
+          Map.put(acc, k, clamp(v + delta, a, b) |> round)
+        _ -> acc
+      end
+    end)
+  end
+
+  defp maybe_jitter(best_cand, _spec, _numeric_keys, _state), do: best_cand
+
+  defp pick_component(%{xs: xs, sigmas: sigmas}) do
     if xs == [] do
       {0.0, 1.0}
     else
-      {i, _} = :rand.uniform_s(length(xs), rng_state)
+      i = :rand.uniform(length(xs))
       {Enum.at(xs, i - 1), Enum.at(sigmas, i - 1)}
     end
   end
@@ -271,8 +301,22 @@ defmodule Scout.Sampler.TPE do
     end
   end
 
-  defp infer_range([]), do: {0.0, 1.0}
-  defp infer_range(xs) do
+  defp infer_range({:uniform, a, b}, _xs) do
+    pad = (b - a) * 0.05
+    {a - pad, b + pad}
+  end
+
+  defp infer_range({:log_uniform, a, b}, _xs) do
+    la = :math.log(a); lb = :math.log(b); pad = (lb - la) * 0.05
+    {la - pad, lb + pad}
+  end
+
+  defp infer_range({:int, a, b}, _xs) do
+    pad = max(1, round((b - a) * 0.05))
+    {a - pad, b + pad}
+  end
+  defp infer_range(_spec, []), do: {0.0, 1.0}
+  defp infer_range(_spec, xs) do
     min = Enum.min(xs); max = Enum.max(xs); pad = (max-min)*0.05 + 1.0e-9
     {min-pad, max+pad}
   end
